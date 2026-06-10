@@ -161,6 +161,49 @@ In Codex, generated manual commands are explicit-only skills and display with a
 Use direct CLI commands when you are scripting, debugging CI, or want exact control.
 Use the installed skill for everyday team contributions.
 
+## Ask a model to set up or clean up a repo
+
+Paste this into your agentic IDE when you want the model to do the setup work:
+
+```text
+Please use Agentic Config Kit to set up and clean up this repo's shared AI config.
+
+Start by running:
+  agentic-config doctor
+
+If this repo does not have Agentic Config Kit initialized yet, run:
+  agentic-config init --stealth .
+
+Then:
+1. Review the doctor output.
+2. Adopt native-only IDE assets into the canonical source with:
+   agentic-config adopt <ide> <path>
+   or, if safe, agentic-config adopt --all
+3. Run:
+   agentic-config sync
+   agentic-config check
+4. Run:
+   agentic-config doctor
+5. If doctor still reports conflicts or same-name assets with different content,
+   stop and explain what needs manual resolution.
+6. Do not delete existing native IDE files unless I explicitly ask.
+7. Do not edit generated files directly. Edit only `.ai/` or `.agentic-config/.ai/`.
+```
+
+For a no-repo-changes setup, add:
+
+```text
+Use stealth mode only. Do not modify tracked Git files. If a tracked generated path
+or tracked AGENTS.md blocks full fidelity, report it instead of changing it.
+```
+
+For a team-committed setup, say:
+
+```text
+Use normal mode, not stealth. Commit-ready source should live in `.ai/`, with
+generated IDE folders ignored.
+```
+
 ## Daily use
 
 Canonical-first:
@@ -188,6 +231,16 @@ agentic-config reconcile --all-exact
 agentic-config sync
 ```
 
+Cleanup-first:
+
+```bash
+agentic-config doctor
+agentic-config adopt --all
+agentic-config sync
+agentic-config check
+agentic-config doctor
+```
+
 Fresh clone:
 
 ```bash
@@ -203,6 +256,33 @@ git commit -m "Add shared agentic config"
 
 `./sync-agentic.sh` remains supported in repos that prefer a local script or have
 not installed the global CLI.
+
+## Reading doctor vs check
+
+`agentic-config check` answers one narrow question: do generated IDE projections
+match the current canonical source? In normal mode that source is `.ai/`; in
+stealth mode it is `.agentic-config/.ai/`.
+
+`agentic-config doctor` answers a broader workflow question: are there native-only
+IDE files, duplicate groups, conflicts, stale outputs, unsupported files, or known
+degraded mappings?
+
+That means both of these can be true at the same time:
+
+```text
+agentic-config check
+In sync: generated entries match .agentic-config/.ai master.
+
+agentic-config doctor
+Native-only assets:
+  .cursor/rules/example.mdc: native-only
+    suggested: agentic-config adopt cursor .cursor/rules/example.mdc
+```
+
+In that case, sync is healthy for the current source, but there are still native
+IDE assets waiting to be adopted. Degraded mappings are usually informational:
+they explain where an IDE lacks a perfect 1:1 equivalent and the kit generated
+the closest available projection.
 
 ## Where each IDE picks things up
 
