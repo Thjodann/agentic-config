@@ -1,5 +1,7 @@
 # Agentic Config Kit
 
+![Agentic Config Kit banner](assets/agentic-config-kit-banner.png)
+
 Author your AI **rules, agents, slash commands, and skills once** in a neutral
 `.ai/` folder, or create them natively in a supported IDE and adopt them into that
 shared source of truth.
@@ -21,6 +23,7 @@ agentic-config-kit/
 ├── README.md
 ├── install.sh
 ├── sync-agentic.sh
+├── assets/agentic-config-kit-banner.png
 ├── hooks/pre-commit
 └── .ai/
     ├── INDEX.md
