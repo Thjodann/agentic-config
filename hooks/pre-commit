@@ -1,0 +1,26 @@
+#!/bin/bash
+# Agentic config guard (standalone).
+#
+# Blocks commits when staged agentic config is stale, or when a developer staged a
+# native IDE asset that has not been adopted into canonical .ai/ config.
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR || true)"
+if printf '%s\n' "$staged" | grep -qE '^(\.ai/|\.claude/|\.cursor/|\.devin/|\.windsurf/|\.agents/|\.codex/|\.continue/|AGENTS\.md$)'; then
+    if [ -x ./sync-agentic.sh ]; then
+        if ! ./sync-agentic.sh doctor --staged; then
+            echo "pre-commit: agentic config needs adoption, sync, or conflict resolution."
+            exit 1
+        fi
+        if ! ./sync-agentic.sh --check; then
+            echo "pre-commit: generated agentic config is stale vs .ai/ master."
+            echo "Run ./sync-agentic.sh, then stage the regenerated files."
+            exit 1
+        fi
+    fi
+fi
+
+exit 0

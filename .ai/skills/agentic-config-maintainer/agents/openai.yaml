@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agentic Config"
+  short_description: "Manage shared AI repo workflows"
+  default_prompt: "Use $agentic-config-maintainer to add, adopt, reconcile, bootstrap, or clean shared agentic config."

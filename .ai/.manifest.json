@@ -1,0 +1,325 @@
+{
+  "outputs": [
+    {
+      "hash": "235090e7334e8d48b382a008e69e81e84ac647b4f819dd6326e75b412a70c0b9",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".agents/skills/agentic-config-maintainer/SKILL.md",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "codex"
+    },
+    {
+      "hash": "eb98381f8ebb3186bd7905e42a6ccf76186aee6e8467376b361e3ce150f04bfb",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".agents/skills/agentic-config-maintainer/agents/openai.yaml",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "codex"
+    },
+    {
+      "hash": "51c2e49537d64cbfaac476a3a27564f1c64ab37ab07addf53409162cee4d6217",
+      "kind": "command",
+      "mode": "file",
+      "path": ".agents/skills/command-agentic-config/SKILL.md",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "codex"
+    },
+    {
+      "hash": "9148c5732192e94b740dd1ade1674c430d1e4ef02645594e6e7f10d36bbe20b6",
+      "kind": "command",
+      "mode": "file",
+      "path": ".agents/skills/command-agentic-config/agents/openai.yaml",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "codex"
+    },
+    {
+      "hash": "be423628670644e5953c985d91e0eb9c42e6a53a11cb1ca6e61b8f691a012c84",
+      "kind": "command",
+      "mode": "file",
+      "path": ".agents/skills/command-example-summarize/SKILL.md",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "codex"
+    },
+    {
+      "hash": "6f4b045b1ee7dcd4573cb9d15906a27326d2ea76448ed669d991b2c66b1da057",
+      "kind": "command",
+      "mode": "file",
+      "path": ".agents/skills/command-example-summarize/agents/openai.yaml",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "codex"
+    },
+    {
+      "hash": "26aded41304236da5ae8cdb20e9067c9e1a0b5cc8e1b0ee4a5eecbea5e704c05",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".agents/skills/example-skill/SKILL.md",
+      "source": ".ai/skills/example-skill/SKILL.md",
+      "target": "codex"
+    },
+    {
+      "hash": "350f42222d5958f970203c07dd2fb66bc5a50a7c8c01c1b95ca6b6a532d3e39c",
+      "kind": "rule",
+      "mode": "file",
+      "path": ".agents/skills/rule-example-repo-guidance/SKILL.md",
+      "source": ".ai/rules/example-repo-guidance.md",
+      "target": "codex"
+    },
+    {
+      "hash": "b0cb9ffc1c4066c770e8db49cb32b24aac9a9afb78e09854fbad1d0fd8732741",
+      "kind": "rule",
+      "mode": "file",
+      "path": ".agents/skills/rule-example-repo-guidance/agents/openai.yaml",
+      "source": ".ai/rules/example-repo-guidance.md",
+      "target": "codex"
+    },
+    {
+      "hash": "332c47990b2a9ae89a55a0e543f689fe20974ff787f039efc177c595d18573bc",
+      "kind": "agent",
+      "mode": "file",
+      "path": ".claude/agents/example-code-reviewer.md",
+      "source": ".ai/agents/example-code-reviewer.md",
+      "target": "claude"
+    },
+    {
+      "hash": "784d166f11d62404b971e1a5c0611c06bc11ad92cc8a8ca8bd72e88d3057503d",
+      "kind": "command",
+      "mode": "file",
+      "path": ".claude/commands/agentic-config.md",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "claude"
+    },
+    {
+      "hash": "9f60cf1ffd1fdc4b7d849ba34c7dbe38d8dee8242fddd3dd93b1b1d346a48e81",
+      "kind": "command",
+      "mode": "file",
+      "path": ".claude/commands/example-summarize.md",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "claude"
+    },
+    {
+      "hash": "c375b22aa3b3e35ae256ebcfc4ca3b726ec09eba0d02585fff285a6bc3599df4",
+      "kind": "rule",
+      "mode": "file",
+      "path": ".claude/rules/example-repo-guidance.md",
+      "source": ".ai/rules/example-repo-guidance.md",
+      "target": "claude"
+    },
+    {
+      "hash": "235090e7334e8d48b382a008e69e81e84ac647b4f819dd6326e75b412a70c0b9",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".claude/skills/agentic-config-maintainer/SKILL.md",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "claude"
+    },
+    {
+      "hash": "eb98381f8ebb3186bd7905e42a6ccf76186aee6e8467376b361e3ce150f04bfb",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".claude/skills/agentic-config-maintainer/agents/openai.yaml",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "claude"
+    },
+    {
+      "hash": "36f6df4d67e02169e6a435d26aed3a927740291c95851bbc9f458d3ee8b60a5f",
+      "kind": "command",
+      "mode": "file",
+      "path": ".claude/skills/agentic-config/SKILL.md",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "claude"
+    },
+    {
+      "hash": "26aded41304236da5ae8cdb20e9067c9e1a0b5cc8e1b0ee4a5eecbea5e704c05",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".claude/skills/example-skill/SKILL.md",
+      "source": ".ai/skills/example-skill/SKILL.md",
+      "target": "claude"
+    },
+    {
+      "hash": "55c9c5d7b400a59d428f8a89cbdedb7f2ed307f5875be74acc881a07ddf57db5",
+      "kind": "command",
+      "mode": "file",
+      "path": ".claude/skills/example-summarize/SKILL.md",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "claude"
+    },
+    {
+      "hash": "0acc5568489a83697921f0cd75f53a61d2c52a70c94d2ee59029e3d81818473d",
+      "kind": "agent",
+      "mode": "file",
+      "path": ".codex/agents/example-code-reviewer.toml",
+      "source": ".ai/agents/example-code-reviewer.md",
+      "target": "codex"
+    },
+    {
+      "hash": "2527619781930e9314e5d682356503bfa6a24d0a376ce57a678712ddd3fe28da",
+      "kind": "agent",
+      "mode": "file",
+      "path": ".continue/prompts/agent-example-code-reviewer.md",
+      "source": ".ai/agents/example-code-reviewer.md",
+      "target": "continue"
+    },
+    {
+      "hash": "6d3d4eee94e2eacacaef61e2c53bfbd610cb9a98de981d6110e4060051887e1a",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".continue/prompts/agentic-config-maintainer.md",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "continue"
+    },
+    {
+      "hash": "d20dd6e8642598ad47815bd955ff67ade798ed5110d35fc3637049c20c562e08",
+      "kind": "command",
+      "mode": "file",
+      "path": ".continue/prompts/agentic-config.md",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "continue"
+    },
+    {
+      "hash": "0c8cf15685864a15cb2b1fd2702fb8d7787b1a82fc353b6e8f01da77732045ff",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".continue/prompts/example-skill.md",
+      "source": ".ai/skills/example-skill/SKILL.md",
+      "target": "continue"
+    },
+    {
+      "hash": "152a1dd6068ac801c7646d509695d867ee0da9d624c5b1784af1cf2f985b9f28",
+      "kind": "command",
+      "mode": "file",
+      "path": ".continue/prompts/example-summarize.md",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "continue"
+    },
+    {
+      "hash": "2371d24e43adba074a2f25b142307822ada45efec5978afbd7aeb5654aa88de7",
+      "kind": "rule",
+      "mode": "file",
+      "path": ".continue/prompts/rule-example-repo-guidance.md",
+      "source": ".ai/rules/example-repo-guidance.md",
+      "target": "continue"
+    },
+    {
+      "hash": "52fff023eaf4ad96a5a10a46795eccf2d4509302a8fbe4d55fc1c4b6c5087211",
+      "kind": "agent",
+      "mode": "file",
+      "path": ".cursor/agents/example-code-reviewer.md",
+      "source": ".ai/agents/example-code-reviewer.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "784d166f11d62404b971e1a5c0611c06bc11ad92cc8a8ca8bd72e88d3057503d",
+      "kind": "command",
+      "mode": "file",
+      "path": ".cursor/commands/agentic-config.md",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "9f60cf1ffd1fdc4b7d849ba34c7dbe38d8dee8242fddd3dd93b1b1d346a48e81",
+      "kind": "command",
+      "mode": "file",
+      "path": ".cursor/commands/example-summarize.md",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "8c0a1c45056dc48ca413d3c10d03ed044fb9732bf828b4d230a109de92d8e61d",
+      "kind": "rule",
+      "mode": "file",
+      "path": ".cursor/rules/example-repo-guidance.mdc",
+      "source": ".ai/rules/example-repo-guidance.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "235090e7334e8d48b382a008e69e81e84ac647b4f819dd6326e75b412a70c0b9",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".cursor/skills/agentic-config-maintainer/SKILL.md",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "eb98381f8ebb3186bd7905e42a6ccf76186aee6e8467376b361e3ce150f04bfb",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".cursor/skills/agentic-config-maintainer/agents/openai.yaml",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "26aded41304236da5ae8cdb20e9067c9e1a0b5cc8e1b0ee4a5eecbea5e704c05",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".cursor/skills/example-skill/SKILL.md",
+      "source": ".ai/skills/example-skill/SKILL.md",
+      "target": "cursor"
+    },
+    {
+      "hash": "1cacb656c23c5ab1a4c25b6f15cf9f3b5a25910e5df042a05739a3a51d5d6aad",
+      "kind": "rule",
+      "mode": "file",
+      "path": ".devin/rules/example-repo-guidance.md",
+      "source": ".ai/rules/example-repo-guidance.md",
+      "target": "windsurf"
+    },
+    {
+      "hash": "de2462d2ebeca671d9b7950b3b578bf093e359965e844556fb27a4678a66c50d",
+      "kind": "agent",
+      "mode": "file",
+      "path": ".windsurf/skills/agent-example-code-reviewer/SKILL.md",
+      "source": ".ai/agents/example-code-reviewer.md",
+      "target": "windsurf"
+    },
+    {
+      "hash": "235090e7334e8d48b382a008e69e81e84ac647b4f819dd6326e75b412a70c0b9",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".windsurf/skills/agentic-config-maintainer/SKILL.md",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "windsurf"
+    },
+    {
+      "hash": "eb98381f8ebb3186bd7905e42a6ccf76186aee6e8467376b361e3ce150f04bfb",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".windsurf/skills/agentic-config-maintainer/agents/openai.yaml",
+      "source": ".ai/skills/agentic-config-maintainer/SKILL.md",
+      "target": "windsurf"
+    },
+    {
+      "hash": "26aded41304236da5ae8cdb20e9067c9e1a0b5cc8e1b0ee4a5eecbea5e704c05",
+      "kind": "skill",
+      "mode": "file",
+      "path": ".windsurf/skills/example-skill/SKILL.md",
+      "source": ".ai/skills/example-skill/SKILL.md",
+      "target": "windsurf"
+    },
+    {
+      "hash": "d41caaae0a41e46fbc9b63d2fb891fc81e25a112ba326c13fff79a3cd21503c7",
+      "kind": "command",
+      "mode": "file",
+      "path": ".windsurf/workflows/agentic-config.md",
+      "source": ".ai/commands/agentic-config.md",
+      "target": "windsurf"
+    },
+    {
+      "hash": "3a1b3d9c0ef771509f9f98b949ab744c97baaff345e6f6e73343aed3ebbe03da",
+      "kind": "command",
+      "mode": "file",
+      "path": ".windsurf/workflows/example-summarize.md",
+      "source": ".ai/commands/example-summarize.md",
+      "target": "windsurf"
+    },
+    {
+      "block": "rules",
+      "kind": "rule",
+      "mode": "managed-block",
+      "path": "AGENTS.md",
+      "source": ".ai/rules",
+      "target": "codex"
+    }
+  ],
+  "version": 2
+}

@@ -1,0 +1,14 @@
+# Generated agentic IDE projections. The canonical source is `.ai/`.
+.claude/
+.cursor/
+.devin/
+.windsurf/
+.agents/
+.codex/agents/
+.continue/
+
+# Keep project Codex config/policy files trackable.
+!.codex/
+!.codex/config.toml
+!.codex/rules/
+!.codex/rules/**
