@@ -36,9 +36,12 @@ def read(path):
 class SyncRepo(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="agentic-kit-test-")
+        self.home = os.path.join(self.tmp, "home")
+        os.makedirs(self.home)
         os.makedirs(os.path.join(self.tmp, ".ai"))
         shutil.copyfile(SYNC_SRC, os.path.join(self.tmp, ".ai", "sync.py"))
         self.env = dict(os.environ)
+        self.env["HOME"] = self.home
         self.env["PYTHONPYCACHEPREFIX"] = os.path.join(self.tmp, ".pycache")
 
     def tearDown(self):
@@ -157,6 +160,65 @@ Use service boundaries.
         self.assertIn("activation: glob", canonical)
         self.assertIn("globs: app/api/**/*.py", canonical)
 
+    def test_ide_prefixed_canonical_rule_generates_portable_projection_names(self):
+        write(self.path(".ai", "rules", "cursor-runbook-naming.md"), """---
+name: cursor-runbook-naming
+description: Naming guidance for runbooks.
+activation: model_decision
+---
+
+Use neutral runbook names.
+""")
+
+        self.run_sync()
+
+        expected = [
+            ".claude/rules/runbook-naming.md",
+            ".cursor/rules/runbook-naming.mdc",
+            ".devin/rules/runbook-naming.md",
+            ".agents/skills/rule-runbook-naming/SKILL.md",
+            ".agents/skills/rule-runbook-naming/agents/openai.yaml",
+            ".continue/prompts/rule-runbook-naming.md",
+        ]
+        for rel in expected:
+            self.assertTrue(os.path.exists(self.path(*rel.split("/"))), rel)
+        self.assertFalse(os.path.exists(
+            self.path(".agents", "skills", "rule-cursor-runbook-naming", "SKILL.md")))
+
+        codex_yaml = read(self.path(
+            ".agents", "skills", "rule-runbook-naming", "agents", "openai.yaml"))
+        self.assertIn("display_name: \"Rule: runbook-naming\"", codex_yaml)
+        codex_skill = read(self.path(
+            ".agents", "skills", "rule-runbook-naming", "SKILL.md"))
+        self.assertIn("name: rule-runbook-naming", codex_skill)
+        self.assertIn("# Rule: runbook-naming", codex_skill)
+        continue_prompt = read(self.path(".continue", "prompts", "rule-runbook-naming.md"))
+        self.assertIn("# Rule: runbook-naming", continue_prompt)
+        agents_md = read(self.path("AGENTS.md"))
+        self.assertIn("## runbook-naming", agents_md)
+        self.assertNotIn("cursor-runbook-naming", agents_md)
+
+        doctor = self.run_sync("doctor", check=False)
+        self.assertNotEqual(doctor.returncode, 0)
+        self.assertIn("IDE-specific canonical names:", doctor.stdout)
+        self.assertIn(".ai/rules/cursor-runbook-naming.md", doctor.stdout)
+        self.assertIn("rename source and frontmatter to runbook-naming", doctor.stdout)
+
+    def test_adopt_ide_prefixed_native_name_writes_portable_canonical_source(self):
+        write(self.path(".cursor", "rules", "cursor-runbook-naming.mdc"), """---
+description: Naming guidance for runbooks.
+---
+
+Use neutral runbook names.
+""")
+
+        self.run_sync("adopt", "cursor", ".cursor/rules/cursor-runbook-naming.mdc")
+
+        canonical = read(self.path(".ai", "rules", "runbook-naming.md"))
+        self.assertIn("name: runbook-naming", canonical)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "rules", "cursor-runbook-naming.md")))
+
     def test_adopt_windsurf_workflow(self):
         write(self.path(".windsurf", "workflows", "release.md"), """---
 name: release
@@ -256,6 +318,109 @@ Make a plan.
         result = self.run_sync("doctor", check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Codex execution policy", result.stdout)
+
+    def test_doctor_ignores_unrelated_global_native_assets(self):
+        write(os.path.join(self.home, ".codex", "skills", "pro", "SKILL.md"), """---
+name: pro
+description: Personal reply drafting.
+---
+
+Draft a reply.
+""")
+        self.run_sync()
+
+        result = self.run_sync("doctor", check=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Doctor found no agentic config issues.", result.stdout)
+
+    def test_doctor_warns_on_global_native_name_collision(self):
+        self.add_command("commit")
+        self.run_sync()
+        write(os.path.join(self.home, ".codex", "skills", "commit", "SKILL.md"), """---
+name: commit
+description: Personal commit helper.
+---
+
+Avoid one big commit.
+""")
+
+        result = self.run_sync("doctor", check=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Global native overlaps:", result.stdout)
+        self.assertIn("~/.codex/skills/commit/SKILL.md", result.stdout)
+        self.assertIn("native skill commit overlaps canonical command commit", result.stdout)
+
+    def test_bootstrap_reports_global_overlap_without_failing(self):
+        self.add_command("commit")
+        write(os.path.join(self.home, ".codex", "skills", "commit", "SKILL.md"), """---
+name: commit
+description: Personal commit helper.
+---
+
+Avoid one big commit.
+""")
+
+        result = self.run_sync("bootstrap")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Global native overlaps:", result.stdout)
+        self.assertIn("Bootstrap complete", result.stdout)
+
+    def test_clean_global_native_duplicates_requires_global_flag(self):
+        self.add_skill("debugger")
+        self.run_sync()
+        global_skill = os.path.join(self.home, ".codex", "skills", "debugger", "SKILL.md")
+        global_notes = os.path.join(
+            self.home, ".codex", "skills", "debugger", "references", "notes.md")
+        write(global_skill, """---
+name: debugger
+description: Debugs failures with logs and tests.
+allowed-tools: Bash, Read
+---
+
+Debug the failure.
+""")
+        write(global_notes, "Notes\n")
+
+        doctor = self.run_sync("doctor", check=False)
+        self.assertEqual(doctor.returncode, 0)
+        self.assertIn("Global native duplicates already represented in .ai/", doctor.stdout)
+        self.assertIn(
+            "./sync-agentic.sh clean --native-duplicates --global", doctor.stdout)
+
+        self.run_sync("clean", "--native-duplicates")
+        self.assertTrue(os.path.exists(global_skill))
+
+        cleaned = self.run_sync("clean", "--native-duplicates", "--global")
+        self.assertIn("Cleaned 2 exact global native duplicate files.", cleaned.stdout)
+        self.assertFalse(os.path.exists(global_skill))
+        self.assertFalse(os.path.exists(global_notes))
+
+    def test_adopt_accepts_explicit_global_native_path(self):
+        write(os.path.join(self.home, ".codex", "skills", "global-debug", "SKILL.md"), """---
+name: global-debug
+description: Debugs from global Codex config.
+---
+
+Debug from the user-level skill.
+""")
+
+        self.run_sync("adopt", "codex", "~/.codex/skills/global-debug/SKILL.md")
+        self.assertTrue(os.path.exists(
+            self.path(".ai", "skills", "global-debug", "SKILL.md")))
+
+    def test_adopt_all_is_repo_only_unless_global_is_explicit(self):
+        write(os.path.join(self.home, ".codex", "skills", "global-debug", "SKILL.md"), """---
+name: global-debug
+description: Debugs from global Codex config.
+---
+
+Debug from the user-level skill.
+""")
+
+        result = self.run_sync("adopt", "--all")
+        self.assertIn("adopted 0 native assets", result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "skills", "global-debug", "SKILL.md")))
 
     def test_doctor_detects_exact_duplicate_native_skills(self):
         for root in [".cursor/skills", ".agents/skills", ".claude/skills", ".windsurf/skills"]:
@@ -410,7 +575,10 @@ Debug the failure.
 class CliTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="agentic-kit-cli-test-")
+        self.home = os.path.join(self.tmp, "home")
+        os.makedirs(self.home)
         self.env = dict(os.environ)
+        self.env["HOME"] = self.home
         self.env["PYTHONPYCACHEPREFIX"] = os.path.join(
             tempfile.gettempdir(), os.path.basename(self.tmp) + "-pycache")
         self.env["PYTHONDONTWRITEBYTECODE"] = "1"

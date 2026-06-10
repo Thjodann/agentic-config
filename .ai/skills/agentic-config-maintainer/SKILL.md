@@ -31,7 +31,10 @@ ask in plain language; infer the correct command sequence and handle the argumen
 - Clean generated files: run `agentic-config clean` only when the user asks to
   remove local generated projections.
 - Clean native duplicates: run `agentic-config clean --native-duplicates` only
-  when doctor reports exact native duplicates already represented in `.ai/`.
+  when doctor reports exact repo-native duplicates already represented in `.ai/`.
+- Clean global native duplicates: run
+  `agentic-config clean --native-duplicates --global` only when doctor reports
+  exact user-level duplicates and the user explicitly wants global cleanup.
 
 After any mutation, run `agentic-config sync` and `agentic-config check`.
 
@@ -42,7 +45,8 @@ Ask only when the next action is ambiguous, such as:
 - the user wants a new asset but did not say rule, command, skill, or agent;
 - doctor reports same-name assets with different content;
 - multiple native-only assets could match the user's request;
-- cleanup would remove unmanaged native files.
+- cleanup would remove unmanaged native files, especially from user-level
+  directories such as `~/.cursor/` or `~/.codex/`.
 
 ## Guardrails
 

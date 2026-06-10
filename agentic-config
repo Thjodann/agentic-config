@@ -332,10 +332,10 @@ Usage:
   agentic-config doctor [--staged]
   agentic-config bootstrap
   agentic-config adopt <ide> <path>
-  agentic-config adopt --all
+  agentic-config adopt --all [--global]
   agentic-config reconcile <kind> <name>
   agentic-config reconcile --all-exact
-  agentic-config clean [--native-duplicates]
+  agentic-config clean [--native-duplicates] [--global]
 
 Normal init creates repo-local `.ai/` source and source-only ignore rules.
 Stealth init creates local ignored `.agentic-config/.ai/` source with no tracked Git changes.

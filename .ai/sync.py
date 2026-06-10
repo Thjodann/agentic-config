@@ -15,9 +15,10 @@ Usage:
     python3 .ai/sync.py doctor          # diagnose stale/native-only/degraded assets
     python3 .ai/sync.py adopt cursor .cursor/rules/foo.mdc
     python3 .ai/sync.py adopt --all
+    python3 .ai/sync.py adopt --all --global
     python3 .ai/sync.py reconcile --all-exact
     python3 .ai/sync.py reconcile skill debug-word
-    python3 .ai/sync.py clean
+    python3 .ai/sync.py clean --native-duplicates --global
     python3 .ai/sync.py bootstrap
 
 Python 3.6+ stdlib only.
@@ -85,6 +86,30 @@ GENERATED_PREFIXES = (
     ".claude/", ".cursor/", ".devin/", ".windsurf/",
     ".agents/", ".codex/agents/", ".continue/",
 )
+REPO_NATIVE_ROOTS = [
+    ".cursor", ".windsurf", ".devin", ".agents", ".codex", ".claude", ".continue",
+]
+GLOBAL_NATIVE_ROOTS = [
+    ("cursor", ".cursor/rules"),
+    ("cursor", ".cursor/commands"),
+    ("cursor", ".cursor/agents"),
+    ("cursor", ".cursor/skills"),
+    ("windsurf", ".windsurf/rules"),
+    ("windsurf", ".windsurf/workflows"),
+    ("windsurf", ".windsurf/skills"),
+    ("windsurf", ".devin/rules"),
+    ("codex", ".codex/skills"),
+    ("codex", ".codex/agents"),
+    ("codex", ".codex/rules"),
+    ("claude", ".claude/rules"),
+    ("claude", ".claude/commands"),
+    ("claude", ".claude/agents"),
+    ("claude", ".claude/skills"),
+    ("continue", ".continue/prompts"),
+]
+IDE_NAME_PREFIXES = [
+    "claude-code", "cursor", "codex", "claude", "windsurf", "devin", "continue",
+]
 
 
 class SafetyError(Exception):
@@ -99,8 +124,88 @@ def abspath(rel):
     return os.path.join(REPO, rel.replace("/", os.sep))
 
 
+def is_relative_to(path, root):
+    try:
+        return os.path.commonpath([os.path.abspath(path), os.path.abspath(root)]) == os.path.abspath(root)
+    except ValueError:
+        return False
+
+
+def display_path_for_abs(path):
+    ap = os.path.abspath(path)
+    if is_relative_to(ap, REPO):
+        return rel_from_repo(ap)
+    home = os.path.abspath(os.path.expanduser("~"))
+    if is_relative_to(ap, home):
+        return "~/%s" % os.path.relpath(ap, home).replace(os.sep, "/")
+    return ap.replace(os.sep, "/")
+
+
+def native_display_path(path):
+    path = str(path)
+    normalized = path.replace(os.sep, "/")
+    if normalized.startswith("~/"):
+        return display_path_for_abs(os.path.expanduser(path))
+    expanded = os.path.expanduser(path)
+    if os.path.isabs(expanded):
+        return display_path_for_abs(expanded)
+    return normalized
+
+
+def native_abspath(path):
+    path = str(path)
+    expanded = os.path.expanduser(path)
+    if os.path.isabs(expanded):
+        return os.path.abspath(expanded)
+    return abspath(path)
+
+
+def native_logical_path(path):
+    path = native_display_path(path)
+    if path.startswith("~/"):
+        return path[2:]
+    return path
+
+
+def native_scope(path):
+    return "global" if native_display_path(path).startswith("~/") else "repo"
+
+
 def source_rel(*parts):
     return "/".join([AI_REL] + [p.strip("/") for p in parts if p])
+
+
+def portable_asset_name(name):
+    text = str(name or "")
+    for prefix in IDE_NAME_PREFIXES:
+        marker = "%s-" % prefix
+        if text.startswith(marker) and len(text) > len(marker):
+            return text[len(marker):]
+    return text
+
+
+def canonical_source_name(asset):
+    parts = asset["srcrel"].split("/")
+    if asset["type"] == "skill" and len(parts) >= 3:
+        return parts[-2]
+    leaf = parts[-1] if parts else asset["name"]
+    return os.path.splitext(leaf)[0]
+
+
+def canonical_ide_prefix_issues(assets):
+    issues = []
+    for asset in assets:
+        name = asset["name"]
+        source_name = canonical_source_name(asset)
+        portable_name = portable_asset_name(name)
+        portable_source = portable_asset_name(source_name)
+        if portable_name == name and portable_source == source_name:
+            continue
+        neutral = portable_name if portable_name != name else portable_source
+        issues.append(
+            "%s: %s %s uses an IDE-specific name; rename source and frontmatter to %s" %
+            (asset["srcrel"], asset["type"], name, neutral))
+    return issues
 
 
 def add_stealth_skip(message):
@@ -329,9 +434,10 @@ def toml_string(value):
     return json.dumps(value or "", ensure_ascii=False)
 
 
-def render_codex_agent(asset):
+def render_codex_agent(asset, name=None):
+    name = name or asset["name"]
     lines = [
-        'name = %s' % toml_string(asset["name"]),
+        'name = %s' % toml_string(name),
         'description = %s' % toml_string(asset["description"]),
         'developer_instructions = %s' % toml_string(asset["body"].rstrip("\n")),
     ]
@@ -446,9 +552,10 @@ def skill_pairs(asset, name=None, description=None, explicit_only=False):
     ]
 
 
-def rule_skill_body(asset):
+def rule_skill_body(asset, name=None):
+    name = name or asset["name"]
     lines = [
-        "# Rule: %s" % asset["name"],
+        "# Rule: %s" % name,
         "",
         "Activation: %s" % asset.get("activation", "model_decision"),
     ]
@@ -469,7 +576,8 @@ def rule_managed_block(rules):
         "",
     ]
     for asset in rules:
-        parts.append("## %s" % asset["name"])
+        name = portable_asset_name(asset["name"])
+        parts.append("## %s" % name)
         parts.append("")
         parts.append("- Description: %s" % asset["description"])
         parts.append("- Activation: %s" % asset.get("activation", "model_decision"))
@@ -482,9 +590,10 @@ def rule_managed_block(rules):
 
 
 def outputs_for(asset, target):
-    t, n, desc, body, src = (
+    t, source_name, desc, body, src = (
         asset["type"], asset["name"], asset["description"],
         asset["body"], asset["srcrel"])
+    n = portable_asset_name(source_name)
     texts, copies, degradations = {}, {}, []
 
     if t == "rule":
@@ -507,7 +616,7 @@ def outputs_for(asset, target):
         elif target == "codex":
             if activation != "always_on":
                 dn = "rule-%s" % n
-                skill_body = rule_skill_body(asset)
+                skill_body = rule_skill_body(asset, n)
                 texts[".agents/skills/%s/SKILL.md" % dn] = render_markdown(
                     [("name", dn), ("description", desc),
                      ("disable-model-invocation", activation == "manual")],
@@ -521,7 +630,7 @@ def outputs_for(asset, target):
             dn = "rule-%s" % n
             texts[".continue/prompts/%s.md" % dn] = render_markdown(
                 [("name", dn), ("description", desc), ("invokable", True)],
-                rule_skill_body(asset), src)
+                rule_skill_body(asset, n), src)
             degradations.append("continue: rule %s is available as a prompt" % n)
 
     elif t == "agent":
@@ -538,7 +647,7 @@ def outputs_for(asset, target):
                 [("name", dn), ("description", desc)], body, src)
             degradations.append("windsurf: agent %s is exported as a skill" % n)
         elif target == "codex":
-            texts[".codex/agents/%s.toml" % n] = render_codex_agent(asset)
+            texts[".codex/agents/%s.toml" % n] = render_codex_agent(asset, n)
         elif target == "continue":
             dn = "agent-%s" % n
             texts[".continue/prompts/%s.md" % dn] = render_markdown(
@@ -770,10 +879,11 @@ def expected_managed_content(path, blocks):
     return updated
 
 
-def prune_empty_dirs(rel_paths):
+def prune_empty_dirs(rel_paths, boundary=None):
+    boundary = os.path.abspath(boundary or REPO)
     for rp in rel_paths:
-        d = os.path.dirname(abspath(rp))
-        while os.path.commonpath([d, REPO]) == REPO and d != REPO and os.path.isdir(d):
+        d = os.path.dirname(native_abspath(rp))
+        while is_relative_to(d, boundary) and d != boundary and os.path.isdir(d):
             if os.listdir(d):
                 break
             os.rmdir(d)
@@ -1004,7 +1114,7 @@ def command_sync(check=False):
 
 
 def has_marker(rel):
-    ap = abspath(rel)
+    ap = native_abspath(rel)
     if not os.path.isfile(ap):
         return False
     try:
@@ -1014,7 +1124,7 @@ def has_marker(rel):
 
 
 def detect_native(ide, rel):
-    rel = rel.replace(os.sep, "/")
+    rel = native_logical_path(rel)
     if ide == "cursor":
         if rel.startswith(".cursor/rules/") and rel.endswith(".mdc"):
             return "rule"
@@ -1036,6 +1146,8 @@ def detect_native(ide, rel):
             return "unsupported-policy"
         if rel.startswith(".agents/skills/") and rel.endswith("/SKILL.md"):
             return "skill"
+        if rel.startswith(".codex/skills/") and rel.endswith("/SKILL.md"):
+            return "skill"
         if rel.startswith(".codex/agents/") and rel.endswith(".toml"):
             return "agent"
     if ide == "claude":
@@ -1054,6 +1166,7 @@ def detect_native(ide, rel):
 
 
 def ide_from_path(rel):
+    rel = native_logical_path(rel)
     if rel.startswith(".cursor/"):
         return "cursor"
     if rel.startswith(".windsurf/") or rel.startswith(".devin/"):
@@ -1068,6 +1181,7 @@ def ide_from_path(rel):
 
 
 def native_name(kind, rel):
+    rel = native_logical_path(rel)
     parts = rel.split("/")
     if kind == "skill":
         return parts[-2]
@@ -1109,8 +1223,9 @@ def parse_simple_toml_agent(text, src):
                 values[key] = strip_quotes(val)
     body = values.get("developer_instructions") or values.get("prompt") or ""
     desc = values.get("description") or first_paragraph(body) or "Imported Codex agent."
-    fm = {"name": values.get("name"), "description": desc, "model": values.get("model")}
-    return base_asset("agent", values.get("name") or slugify(src), desc, body, src, fm=fm)
+    name = portable_asset_name(values.get("name") or slugify(src))
+    fm = {"name": name, "description": desc, "model": values.get("model")}
+    return base_asset("agent", name, desc, body, src, fm=fm)
 
 
 def cursor_activation(fm):
@@ -1124,7 +1239,8 @@ def cursor_activation(fm):
 
 
 def native_to_asset(ide, rel, kind):
-    ap = abspath(rel)
+    rel = native_display_path(rel)
+    ap = native_abspath(rel)
     text = read_text(ap)
     if kind == "unsupported-policy":
         raise ValueError("%s is a Codex execution policy, not portable behavioral guidance" % rel)
@@ -1132,9 +1248,9 @@ def native_to_asset(ide, rel, kind):
         return parse_simple_toml_agent(text, rel)
 
     fm, body = parse_frontmatter(text, rel, require=False)
+    fm = dict(fm)
     body = strip_marker(body)
     name = fm.get("name") or native_name(kind, rel)
-    description = fm.get("description") or first_paragraph(body) or "Imported %s from %s." % (kind, ide)
 
     if ide == "cursor" and kind == "rule":
         fm["activation"] = cursor_activation(fm)
@@ -1150,6 +1266,9 @@ def native_to_asset(ide, rel, kind):
         kind = "rule"
         name = name[len("rule-"):]
         fm["activation"] = "manual" if parse_bool(fm.get("disable-model-invocation", False)) else "model_decision"
+    name = portable_asset_name(name)
+    fm["name"] = name
+    description = fm.get("description") or first_paragraph(body) or "Imported %s." % kind
 
     srcdir = os.path.dirname(ap) if kind == "skill" else None
     return base_asset(kind, name, description, body, rel, fm=fm, srcdir=srcdir)
@@ -1221,10 +1340,12 @@ def asset_key(asset):
 
 
 def native_record(ide, kind, rel):
+    rel = native_display_path(rel)
     if kind == "unsupported-policy":
         return {
             "ide": ide, "kind": kind, "path": rel, "asset": None,
             "fingerprint": None, "error": "Codex execution policy",
+            "scope": native_scope(rel),
         }
     asset = native_to_asset(ide, rel, kind)
     return {
@@ -1234,29 +1355,32 @@ def native_record(ide, kind, rel):
         "asset": asset,
         "fingerprint": asset_fingerprint(asset),
         "error": None,
+        "scope": native_scope(rel),
     }
 
 
 def canonical_indexes(assets):
-    by_key, by_fp = {}, {}
+    by_key, by_fp, by_name = {}, {}, {}
     for asset in assets:
         by_key[asset_key(asset)] = asset
         by_fp[asset_fingerprint(asset)] = asset
-    return by_key, by_fp
+        by_name[asset["name"]] = asset
+    return by_key, by_fp, by_name
 
 
 def analyze_native_state(staged_only=False):
     assets = load_assets()
-    canonical_by_key, canonical_by_fp = canonical_indexes(assets)
+    canonical_by_key, canonical_by_fp, canonical_by_name = canonical_indexes(assets)
     staged = staged_paths() if staged_only else None
     records, unsupported, parse_errors = [], [], []
 
-    for ide, kind, rp in scan_native_files():
+    for ide, kind, rp in scan_native_files(include_global=not staged_only):
         if staged is not None and rp not in staged:
             continue
         if kind == "unsupported-policy":
-            unsupported.append(
-                "%s: Codex execution policy; keep Codex-only or document separately" % rp)
+            if native_scope(rp) == "repo":
+                unsupported.append(
+                    "%s: Codex execution policy; keep Codex-only or document separately" % rp)
             continue
         if has_marker(rp):
             continue
@@ -1265,22 +1389,40 @@ def analyze_native_state(staged_only=False):
         except Exception as e:
             parse_errors.append("%s: could not parse native asset (%s)" % (rp, e))
 
-    represented, canonical_conflicts = [], []
+    represented, canonical_conflicts, global_canonical_conflicts = [], [], []
     without_canonical = {}
+    global_native_only = []
     for record in records:
         asset = record["asset"]
         key = asset_key(asset)
         if record["fingerprint"] in canonical_by_fp:
             represented.append(record)
         elif key in canonical_by_key:
-            canonical_conflicts.append(
+            message = (
                 "%s: canonical %s asset already exists with different content; resolve manually" %
                 (record["path"], AI_REL))
+            if record["scope"] == "global":
+                global_canonical_conflicts.append(message)
+            else:
+                canonical_conflicts.append(message)
+        elif asset["name"] in canonical_by_name:
+            canonical = canonical_by_name[asset["name"]]
+            message = (
+                "%s: native %s %s overlaps canonical %s %s in %s/; resolve manually" %
+                (record["path"], asset["type"], asset["name"],
+                 canonical["type"], canonical["name"], AI_REL))
+            if record["scope"] == "global":
+                global_canonical_conflicts.append(message)
+            else:
+                canonical_conflicts.append(message)
         else:
             without_canonical.setdefault(key, []).append(record)
 
     exact_groups, native_only, duplicate_conflicts = [], [], []
     for key, group in sorted(without_canonical.items()):
+        if all(r["scope"] == "global" for r in group):
+            global_native_only.extend(group)
+            continue
         by_fp = {}
         for record in group:
             by_fp.setdefault(record["fingerprint"], []).append(record)
@@ -1294,7 +1436,11 @@ def analyze_native_state(staged_only=False):
         if len(only_group) > 1:
             exact_groups.append(only_group)
         else:
-            native_only.append(only_group[0])
+            record = only_group[0]
+            if record["scope"] == "global":
+                global_native_only.append(record)
+            else:
+                native_only.append(record)
 
     possible = []
     by_body = {}
@@ -1303,6 +1449,8 @@ def analyze_native_state(staged_only=False):
         body_key = (asset["type"], normalize_body(asset["body"]))
         by_body.setdefault(body_key, []).append(record)
     for (_kind, _body), group in sorted(by_body.items(), key=lambda item: item[0]):
+        if all(r["scope"] == "global" for r in group):
+            continue
         names = sorted(set(r["asset"]["name"] for r in group))
         if len(names) > 1:
             possible.append(
@@ -1315,7 +1463,9 @@ def analyze_native_state(staged_only=False):
         "canonical_by_fp": canonical_by_fp,
         "records": records,
         "represented": represented,
+        "global_native_only": global_native_only,
         "canonical_conflicts": canonical_conflicts,
+        "global_canonical_conflicts": global_canonical_conflicts,
         "duplicate_conflicts": duplicate_conflicts,
         "exact_groups": exact_groups,
         "native_only": native_only,
@@ -1338,7 +1488,7 @@ def write_canonical_asset(asset):
 
 
 def adopt_asset(ide, path):
-    rel = relpath(path)
+    rel = native_display_path(path)
     kind = detect_native(ide, rel)
     if not kind:
         raise ValueError("%s is not a supported %s-native asset" % (rel, ide))
@@ -1351,20 +1501,32 @@ def adopt_asset(ide, path):
     return 0
 
 
-def scan_native_files():
+def scan_native_files(include_global=True, include_repo=True):
     found = []
-    roots = [".cursor", ".windsurf", ".devin", ".agents", ".codex", ".claude", ".continue"]
-    for root in roots:
-        base = abspath(root)
-        if not os.path.isdir(base):
-            continue
-        for dirpath, _dirs, files in os.walk(base):
-            for f in files:
-                rp = relpath(os.path.join(dirpath, f))
-                ide = ide_from_path(rp)
-                kind = detect_native(ide, rp) if ide else None
-                if kind:
-                    found.append((ide, kind, rp))
+    if include_repo:
+        for root in REPO_NATIVE_ROOTS:
+            base = abspath(root)
+            if not os.path.isdir(base):
+                continue
+            for dirpath, _dirs, files in os.walk(base):
+                for f in files:
+                    rp = relpath(os.path.join(dirpath, f))
+                    ide = ide_from_path(rp)
+                    kind = detect_native(ide, rp) if ide else None
+                    if kind:
+                        found.append((ide, kind, rp))
+    if include_global:
+        home = os.path.abspath(os.path.expanduser("~"))
+        for ide, root in GLOBAL_NATIVE_ROOTS:
+            base = os.path.join(home, root.replace("/", os.sep))
+            if not os.path.isdir(base):
+                continue
+            for dirpath, _dirs, files in os.walk(base):
+                for f in files:
+                    rp = display_path_for_abs(os.path.join(dirpath, f))
+                    kind = detect_native(ide, rp)
+                    if kind:
+                        found.append((ide, kind, rp))
     return sorted(found, key=lambda x: x[2])
 
 
@@ -1372,7 +1534,7 @@ def command_adopt(args):
     try:
         if args.all:
             adopted = 0
-            for ide, kind, rp in scan_native_files():
+            for ide, kind, rp in scan_native_files(include_global=args.global_scope):
                 if kind == "unsupported-policy" or has_marker(rp):
                     continue
                 adopt_asset(ide, rp)
@@ -1404,17 +1566,19 @@ def find_doctor_issues(staged_only=False):
     state = analyze_native_state(staged_only=staged_only)
     state["drift"] = drift
     state["degradations"] = degradations
+    state["canonical_ide_prefixes"] = canonical_ide_prefix_issues(assets)
     return state
 
 
 def command_doctor(args):
     state = find_doctor_issues(args.staged)
     conflicts = state["canonical_conflicts"] + state["duplicate_conflicts"] + state["parse_errors"]
+    global_conflicts = state["global_canonical_conflicts"]
     has_blocking = any([
         state["drift"], state["native_only"], state["exact_groups"],
-        conflicts, state["unsupported"],
+        conflicts, state["unsupported"], state["canonical_ide_prefixes"],
     ])
-    if not any([has_blocking, state["represented"], state["possible"], state["degradations"]]):
+    if not any([has_blocking, global_conflicts, state["represented"], state["possible"], state["degradations"]]):
         print("Doctor found no agentic config issues.")
         return 0
 
@@ -1429,14 +1593,24 @@ def command_doctor(args):
                 COMMAND_NAME, "reconcile", asset["type"], asset["name"]]))
         print("  all exact groups: %s" %
               shell_command([COMMAND_NAME, "reconcile", "--all-exact"]))
-    if state["represented"]:
+    repo_represented = [r for r in state["represented"] if r["scope"] == "repo"]
+    global_represented = [r for r in state["represented"] if r["scope"] == "global"]
+    if repo_represented:
         print("Native duplicates already represented in %s/:" % AI_REL)
-        for record in state["represented"]:
+        for record in repo_represented:
             asset = record["asset"]
             print("  %s -> %s %s %s" %
                   (record["path"], AI_REL, asset["type"], asset["name"]))
         print("  optional cleanup: %s" %
               shell_command([COMMAND_NAME, "clean", "--native-duplicates"]))
+    if global_represented:
+        print("Global native duplicates already represented in %s/:" % AI_REL)
+        for record in global_represented:
+            asset = record["asset"]
+            print("  %s -> %s %s %s" %
+                  (record["path"], AI_REL, asset["type"], asset["name"]))
+        print("  optional cleanup: %s" %
+              shell_command([COMMAND_NAME, "clean", "--native-duplicates", "--global"]))
     if state["native_only"]:
         print("Native-only assets:")
         for record in state["native_only"]:
@@ -1451,6 +1625,14 @@ def command_doctor(args):
     if conflicts:
         print("Canonical conflicts:")
         for item in conflicts:
+            print("  %s" % item)
+    if global_conflicts:
+        print("Global native overlaps:")
+        for item in global_conflicts:
+            print("  %s" % item)
+    if state["canonical_ide_prefixes"]:
+        print("IDE-specific canonical names:")
+        for item in state["canonical_ide_prefixes"]:
             print("  %s" % item)
     if state["possible"]:
         print("Possible duplicates:")
@@ -1467,7 +1649,7 @@ def command_doctor(args):
     print_stealth_skips()
     return 1 if any([
         state["drift"], state["native_only"], state["exact_groups"],
-        conflicts, state["unsupported"],
+        conflicts, state["unsupported"], state["canonical_ide_prefixes"],
     ]) else 0
 
 
@@ -1521,20 +1703,22 @@ def remove_native_record(record):
     asset = record["asset"]
     removed = []
     if asset["type"] == "skill":
-        root = os.path.dirname(abspath(record["path"]))
+        root = os.path.dirname(native_abspath(record["path"]))
         skill_md = os.path.join(root, "SKILL.md")
         if remove_file_if_exists(skill_md):
-            removed.append(relpath(skill_md))
+            removed.append(display_path_for_abs(skill_md))
         for rel in sorted(asset.get("aux", {})):
             aux_path = os.path.join(root, rel.replace("/", os.sep))
             if remove_file_if_exists(aux_path):
-                removed.append(relpath(aux_path))
-        prune_empty_dirs(removed)
+                removed.append(display_path_for_abs(aux_path))
+        boundary = os.path.dirname(root) if record["scope"] == "global" else REPO
+        prune_empty_dirs(removed, boundary=boundary)
     else:
-        path = abspath(record["path"])
+        path = native_abspath(record["path"])
         if remove_file_if_exists(path):
             removed.append(record["path"])
-            prune_empty_dirs([record["path"]])
+            boundary = os.path.dirname(os.path.dirname(path)) if record["scope"] == "global" else REPO
+            prune_empty_dirs([record["path"]], boundary=boundary)
     return removed
 
 
@@ -1556,11 +1740,15 @@ def command_clean(args):
         return 1
     prune_empty_dirs(removed)
 
-    native_removed = []
+    native_removed, global_native_removed = [], []
     if args.native_duplicates:
         state = analyze_native_state(staged_only=False)
         for record in state["represented"]:
-            native_removed.extend(remove_native_record(record))
+            if record["scope"] == "global":
+                if args.global_scope:
+                    global_native_removed.extend(remove_native_record(record))
+            else:
+                native_removed.extend(remove_native_record(record))
 
     print("Cleaned %d generated projection files." % len(removed))
     for p in removed:
@@ -1569,6 +1757,11 @@ def command_clean(args):
         print("Cleaned %d exact native duplicate files." % len(native_removed))
         for p in native_removed:
             print("  removed %s" % p)
+        if args.global_scope:
+            print("Cleaned %d exact global native duplicate files." %
+                  len(global_native_removed))
+            for p in global_native_removed:
+                print("  removed %s" % p)
     return 0
 
 
@@ -1612,6 +1805,7 @@ def main(argv=None):
         ap.add_argument("ide", nargs="?")
         ap.add_argument("path", nargs="?")
         ap.add_argument("--all", action="store_true")
+        ap.add_argument("--global", dest="global_scope", action="store_true")
         args = ap.parse_args(argv[1:])
         if args.ide == "--all":
             args.all = True
@@ -1626,6 +1820,7 @@ def main(argv=None):
     if cmd == "clean":
         ap = argparse.ArgumentParser(prog="sync.py clean")
         ap.add_argument("--native-duplicates", action="store_true")
+        ap.add_argument("--global", dest="global_scope", action="store_true")
         return command_clean(ap.parse_args(argv[1:]))
     if cmd == "bootstrap":
         ap = argparse.ArgumentParser(prog="sync.py bootstrap")

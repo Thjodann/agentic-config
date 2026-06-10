@@ -38,8 +38,12 @@ agentic-config check
 agentic-config doctor
 agentic-config bootstrap
 agentic-config adopt cursor .cursor/rules/my-rule.mdc
+agentic-config adopt --all
+agentic-config adopt --all --global
 agentic-config reconcile --all-exact
 agentic-config clean
+agentic-config clean --native-duplicates
+agentic-config clean --native-duplicates --global
 
 ./sync-agentic.sh
 ./sync-agentic.sh sync
@@ -52,10 +56,12 @@ agentic-config clean
 ./sync-agentic.sh adopt codex .agents/skills/debug/SKILL.md
 ./sync-agentic.sh adopt claude .claude/agents/reviewer.md
 ./sync-agentic.sh adopt --all
+./sync-agentic.sh adopt --all --global
 ./sync-agentic.sh reconcile skill debug-word
 ./sync-agentic.sh reconcile --all-exact
 ./sync-agentic.sh clean
 ./sync-agentic.sh clean --native-duplicates
+./sync-agentic.sh clean --native-duplicates --global
 ./sync-agentic.sh bootstrap
 ```
 
@@ -64,7 +70,11 @@ repo-local compatibility wrapper. `doctor` reports native-only assets, stale
 generated files, canonical conflicts, and known degradations. `adopt` promotes
 native IDE files into `.ai/`; `reconcile` canonicalizes exact duplicate native
 assets; `clean` removes generated local projections; `bootstrap` generates
-projections after clone.
+projections after clone. `doctor` also checks supported user-level directories
+like `~/.cursor/` and `~/.codex/` for assets that overlap this repo's `.ai/`
+source, while ignoring unrelated global-only personal assets. Global overlaps
+are reported as user-level warnings and do not fail `doctor` or `bootstrap` on
+their own.
 
 The compiler can also run from an external canonical source by setting
 `AGENTIC_CONFIG_REPO_ROOT` and `AGENTIC_CONFIG_AI_DIR`. The CLI uses this for
@@ -75,6 +85,9 @@ IDE projections still land in the repo root.
 
 All assets require `description`. `name` is optional and defaults to the file or
 directory name.
+Use behavior names rather than origin-IDE names: prefer `runbook-naming` over
+`cursor-runbook-naming`. Generated projections strip leading IDE prefixes, and
+`doctor` reports canonical sources that still need to be renamed.
 
 ```yaml
 ---
@@ -188,4 +201,7 @@ reported instead of overwritten or deleted.
 `agentic-config clean` removes generated IDE projection files listed in the manifest
 while keeping `.ai/` and root `AGENTS.md`. It refuses markerless files whose bytes no
 longer match the manifest hash. Add `--native-duplicates` only when you want to remove
-unmanaged native files that exactly match canonical assets.
+unmanaged repo-native files that exactly match canonical assets. Add `--global` to
+that cleanup only when you also want to remove exact duplicate files from user-level
+IDE directories. Use `adopt --all --global` only when you intentionally want to pull
+supported user-level assets from `~/` into this repo's canonical source.

@@ -11,6 +11,8 @@ and Continue** so no teammate is limited by their preferred agentic IDE.
 
 - **Zero dependencies** - Python 3.6+ standard library only.
 - **Multi-origin** - native IDE assets can be adopted or reconciled into `.ai/`.
+- **Global-aware** - `doctor` notices overlapping user-level assets in folders
+  like `~/.cursor/` and `~/.codex/`.
 - **Deterministic** - `check` guards against stale committed output.
 - **Safe deletes** - generated files and managed blocks are pruned without touching
   hand-written settings, MCP config, hooks, or local preferences.
@@ -46,6 +48,8 @@ agentic-config doctor
 
 If `doctor` still reports native-only assets, adopt the remaining files or resolve
 any conflicts it reports. Degraded mappings are usually informational.
+Use `adopt --all --global` only when you deliberately want to import supported
+user-level assets from `~/` into this repo's `.ai/` source.
 
 After a source-only clone, regenerate local IDE projections:
 
@@ -79,6 +83,11 @@ agentic-config-kit/
 
 The `example-*` assets are starter templates. Keep them while learning the format, or
 delete them and add your own.
+
+Name canonical assets for the behavior they provide, not the IDE where they were
+created. For example, use `runbook-naming` instead of `cursor-runbook-naming`;
+generated projections strip leading IDE prefixes, and `doctor` reports canonical
+sources that still need to be renamed.
 
 ## Install the CLI
 
@@ -304,8 +313,8 @@ match the current canonical source? In normal mode that source is `.ai/`; in
 stealth mode it is `.agentic-config/.ai/`.
 
 `agentic-config doctor` answers a broader workflow question: are there native-only
-IDE files, duplicate groups, conflicts, stale outputs, unsupported files, or known
-degraded mappings?
+IDE files, duplicate groups, conflicts, stale outputs, unsupported files, known
+degraded mappings, or overlapping user-level IDE assets?
 
 That means both of these can be true at the same time:
 
@@ -323,6 +332,13 @@ In that case, sync is healthy for the current source, but there are still native
 IDE assets waiting to be adopted. Degraded mappings are usually informational:
 they explain where an IDE lacks a perfect 1:1 equivalent and the kit generated
 the closest available projection.
+
+`doctor` also scans supported global IDE directories such as `~/.cursor/commands`,
+`~/.codex/skills`, and `~/.claude/commands` for assets that overlap the current
+repo's `.ai/` source. Global-only personal assets are not treated as project
+issues. If a global asset duplicates or conflicts with this repo's command, skill,
+rule, or agent names, `doctor` reports it as a user-level warning without failing
+`doctor` or `bootstrap` on that warning alone.
 
 ## Where each IDE picks things up
 
@@ -343,6 +359,10 @@ the closest available projection.
 - Use `agentic-config clean` to remove generated local IDE projections.
 - Use `agentic-config clean --native-duplicates` only for exact native duplicates
   that are already represented in `.ai/`.
+- Add `--global` to that cleanup command only when you explicitly want to remove
+  exact duplicate files from user-level IDE directories.
+- Use `agentic-config adopt --all --global` only when you explicitly want to import
+  supported user-level IDE assets into the repo's canonical source.
 - Keep Codex `.codex/rules/*.rules` as Codex-only execution policy; these are not
   portable behavioral rules.
 

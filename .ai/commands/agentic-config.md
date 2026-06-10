@@ -1,6 +1,6 @@
 ---
 name: agentic-config
-description: Conversationally manage the shared agentic config. Use this when the user wants to add a shared rule, command, skill, or agent; adopt native IDE config; reconcile duplicates; bootstrap projections after clone; check sync health; or clean generated output without remembering CLI arguments.
+description: Conversationally manage the shared agentic config. Use this when the user wants to add a shared rule, command, skill, or agent; adopt native IDE config; reconcile repo/global duplicates; bootstrap projections after clone; check sync health; or clean generated output without remembering CLI arguments.
 argument-hint: "[what you want to do]"
 ---
 

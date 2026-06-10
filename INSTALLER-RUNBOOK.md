@@ -156,6 +156,10 @@ Then follow the report:
 - Same-name different-content conflict: stop and ask which version should become
   canonical, or merge by editing the `.ai/` asset manually.
 
+`doctor` also reports supported global IDE assets such as `~/.cursor/commands/*`
+or `~/.codex/skills/*` when they overlap this repo's `.ai/` source. Treat those as
+user-level cleanup warnings, not generated repo output or project blockers.
+
 After adoption or reconciliation:
 
 ```bash
@@ -212,6 +216,8 @@ Expected:
 - `--check` reports generated entries are in sync.
 - `doctor` may report degraded mappings because not every IDE has identical concepts.
   That is acceptable.
+- `doctor` may report global user-level overlaps from folders such as `~/.codex/`
+  or `~/.cursor/`. Those are cleanup decisions for the user, not install blockers.
 - `doctor` should not report native-only assets, exact duplicate groups, stale output,
   or canonical conflicts unless there is intentional follow-up work.
 
@@ -224,14 +230,27 @@ agentic-config clean
 agentic-config bootstrap
 ```
 
-Only when `doctor` reports exact native duplicates already represented in `.ai/` and the
-user wants them removed:
+Only when `doctor` reports exact repo-native duplicates already represented in `.ai/`
+and the user wants them removed:
 
 ```bash
 agentic-config clean --native-duplicates
 agentic-config sync
 agentic-config check
 ```
+
+Only when `doctor` reports exact user-level duplicates and the user explicitly wants
+global cleanup:
+
+```bash
+agentic-config clean --native-duplicates --global
+agentic-config sync
+agentic-config check
+```
+
+Use `agentic-config adopt --all --global` only when the user explicitly wants to
+import supported user-level IDE assets from `~/` into this repo's canonical `.ai/`
+source.
 
 ## Step 8: Commit Source-Only Setup
 
@@ -262,8 +281,8 @@ To add or adopt AI config, ask your model to use the agentic-config skill, or ru
 
 The easy path is to ask your IDE's model for `/agentic-config` or
 `agentic-config-maintainer`. It can add shared rules/commands/skills/agents, adopt
-native IDE config, reconcile duplicates, bootstrap clones, and run sync/check without
-requiring you to remember CLI arguments.
+native IDE config, reconcile repo/global duplicates, bootstrap clones, and run
+sync/check without requiring you to remember CLI arguments.
 
 Commit `.ai/`, `AGENTS.md`, `.ai/.manifest.json`, and `sync-agentic.sh`.
 Generated IDE folders are local projections and stay ignored.
