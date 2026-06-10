@@ -61,6 +61,30 @@ chmod +x sync-agentic.sh
 ./sync-agentic.sh
 ```
 
+## Easy mode: ask the installed skill
+
+The easiest way to use the kit is to let your agentic IDE call the built-in
+`agentic-config-maintainer` skill or `/agentic-config` command. These are canonical
+`.ai/` assets, so running the installer/runbook and then `./sync-agentic.sh bootstrap`
+projects them into the supported IDE folders automatically.
+
+Instead of memorizing CLI arguments, ask your model for what you want:
+
+```text
+/agentic-config add a shared rule for our API handler conventions
+/agentic-config adopt this Cursor rule into the shared config
+/agentic-config reconcile duplicate skills across the repo
+/agentic-config bootstrap this clone
+```
+
+Different IDEs expose the same helper differently: as a slash command, workflow,
+prompt, or callable skill. In all cases, the maintainer helper should run
+`./sync-agentic.sh doctor`, choose the safe workflow, edit canonical `.ai/` files,
+and finish with `./sync-agentic.sh` plus `./sync-agentic.sh --check`.
+
+Use the raw CLI when you are scripting, debugging CI, or want exact control. Use the
+installed skill for everyday team contributions.
+
 ## Daily use
 
 Canonical-first:

@@ -222,6 +222,11 @@ After cloning, run:
 To add or adopt AI config, ask your model to use the agentic-config skill, or run:
   ./sync-agentic.sh doctor
 
+The easy path is to ask your IDE's model for `/agentic-config` or
+`agentic-config-maintainer`. It can add shared rules/commands/skills/agents, adopt
+native IDE config, reconcile duplicates, bootstrap clones, and run sync/check without
+requiring you to remember CLI arguments.
+
 Commit `.ai/`, `AGENTS.md`, `.ai/.manifest.json`, and `sync-agentic.sh`.
 Generated IDE folders are local projections and stay ignored.
 ```
