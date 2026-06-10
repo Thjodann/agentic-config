@@ -16,6 +16,46 @@ and Continue** so no teammate is limited by their preferred agentic IDE.
   hand-written settings, MCP config, hooks, or local preferences.
 - **Obsidian-compatible** - `.ai/` is plain Markdown; Obsidian is optional.
 
+## Quick Start
+
+Requirement: `python3` 3.6+.
+
+Install the CLI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+```
+
+From the repo you want to set up, choose one mode:
+
+| Goal | Command | Canonical source |
+| --- | --- | --- |
+| Team-shared config committed to the repo | `agentic-config init .` | `.ai/` |
+| Local-only setup with no tracked Git changes | `agentic-config init --stealth .` | `.agentic-config/.ai/` |
+
+If the repo already has native IDE config such as `.cursor/`, `.windsurf/`, or
+`.codex/`, cleanly pull it into the canonical source:
+
+```bash
+agentic-config doctor
+agentic-config adopt --all
+agentic-config sync
+agentic-config check
+agentic-config doctor
+```
+
+If `doctor` still reports native-only assets, adopt the remaining files or resolve
+any conflicts it reports. Degraded mappings are usually informational.
+
+After a source-only clone, regenerate local IDE projections:
+
+```bash
+agentic-config bootstrap
+```
+
+Prefer a model-driven setup? Ask your IDE's model to use `/agentic-config`, or
+paste the prompt in [Ask a model to set up or clean up a repo](#ask-a-model-to-set-up-or-clean-up-a-repo).
+
 ## What's in this kit
 
 ```
@@ -40,7 +80,7 @@ agentic-config-kit/
 The `example-*` assets are starter templates. Keep them while learning the format, or
 delete them and add your own.
 
-## Install The CLI
+## Install the CLI
 
 Requirement: `python3` 3.6+.
 
@@ -53,7 +93,7 @@ From this checkout:
 Or via curl from the public repo:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 ```
 
 The installer copies the CLI and bundled templates to:
@@ -72,7 +112,7 @@ If that bin directory is not on `PATH`, the installer prints the export line to
 add. The command is intentionally `agentic-config` in v1 so it does not collide
 with other tools named `ai`.
 
-## Initialize A Project
+## Initialize a project
 
 Preferred path:
 
