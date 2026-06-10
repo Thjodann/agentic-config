@@ -246,8 +246,9 @@ Make a plan.
 
         result = self.run_sync("doctor", check=False)
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".cursor/commands/📋 plan.md: native-only", result.stdout)
         self.assertIn(
-            "./sync-agentic.sh adopt cursor '.cursor/commands/📋 plan.md'",
+            "suggested: ./sync-agentic.sh adopt cursor '.cursor/commands/📋 plan.md'",
             result.stdout)
 
     def test_codex_rules_are_reported_as_policy_not_portable_rules(self):

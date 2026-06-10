@@ -1440,9 +1440,9 @@ def command_doctor(args):
     if state["native_only"]:
         print("Native-only assets:")
         for record in state["native_only"]:
-            print("  %s: native-only, run %s" %
-                  (record["path"], shell_command([
-                      COMMAND_NAME, "adopt", record["ide"], record["path"]])))
+            print("  %s: native-only" % record["path"])
+            print("    suggested: %s" % shell_command([
+                COMMAND_NAME, "adopt", record["ide"], record["path"]]))
     if state["drift"]:
         print("Generated but stale:")
         for item in state["drift"]:
