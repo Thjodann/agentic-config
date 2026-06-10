@@ -122,6 +122,7 @@ class SyncTests(SyncRepo):
             ".cursor/commands/summarize.md",
             ".windsurf/workflows/summarize.md",
             ".agents/skills/command-summarize/SKILL.md",
+            ".agents/skills/command-summarize/agents/openai.yaml",
             ".codex/agents/reviewer.toml",
             ".windsurf/skills/agent-reviewer/SKILL.md",
             ".agents/skills/debugger/SKILL.md",
@@ -134,6 +135,10 @@ class SyncTests(SyncRepo):
 
         check = self.run_sync("check")
         self.assertIn("In sync", check.stdout)
+        codex_command_yaml = read(self.path(
+            ".agents", "skills", "command-summarize", "agents", "openai.yaml"))
+        self.assertIn("display_name: ⚡ /summarize", codex_command_yaml)
+        self.assertIn("allow_implicit_invocation: false", codex_command_yaml)
 
     def test_adopt_cursor_rule(self):
         write(self.path(".cursor", "rules", "api.mdc"), """---
@@ -359,6 +364,8 @@ Debug the failure.
         self.assertTrue(os.path.exists(self.path(".cursor", "skills", "agentic-config-maintainer", "agents", "openai.yaml")))
         self.assertTrue(os.path.exists(self.path(".cursor", "commands", "agentic-config.md")))
         self.assertTrue(os.path.exists(self.path(".windsurf", "workflows", "agentic-config.md")))
+        command_yaml = read(self.path(".agents", "skills", "command-agentic-config", "agents", "openai.yaml"))
+        self.assertIn("display_name: ⚡ /agentic-config", command_yaml)
 
     def test_source_only_gitignore_keeps_sources_trackable(self):
         if shutil.which("git") is None:

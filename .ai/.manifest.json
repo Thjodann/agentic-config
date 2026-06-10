@@ -25,7 +25,7 @@
       "target": "codex"
     },
     {
-      "hash": "9148c5732192e94b740dd1ade1674c430d1e4ef02645594e6e7f10d36bbe20b6",
+      "hash": "36289ed93ad903e87fc81f8dc80045be3b79c2f16080cfcf6205e75b1940085e",
       "kind": "command",
       "mode": "file",
       "path": ".agents/skills/command-agentic-config/agents/openai.yaml",
@@ -41,7 +41,7 @@
       "target": "codex"
     },
     {
-      "hash": "6f4b045b1ee7dcd4573cb9d15906a27326d2ea76448ed669d991b2c66b1da057",
+      "hash": "7fb87fafbe1b8a7187c49ec821602955b14a596cf2fd55d76c461bc48efe9af2",
       "kind": "command",
       "mode": "file",
       "path": ".agents/skills/command-example-summarize/agents/openai.yaml",

@@ -321,6 +321,10 @@ def render_codex_openai_yaml(display_name, short_description, implicit):
     return "\n".join(body)
 
 
+def codex_command_display_name(name):
+    return "⚡ /%s" % name
+
+
 def base_asset(kind, name, description, body, srcrel, fm=None, srcdir=None):
     fm = fm or {}
     asset = {
@@ -535,7 +539,7 @@ def outputs_for(asset, target):
                  ("disable-model-invocation", True)], body, src)
             texts[".agents/skills/%s/agents/openai.yaml" % dn] = (
                 HASH_MARKER.format(src=src) + "\n" +
-                render_codex_openai_yaml(n, desc, False))
+                render_codex_openai_yaml(codex_command_display_name(n), desc, False))
             degradations.append("codex: command %s is exported as an explicit skill" % n)
         elif target == "continue":
             texts[".continue/prompts/%s.md" % n] = render_markdown(

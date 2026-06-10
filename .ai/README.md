@@ -116,7 +116,7 @@ allowed-tools: Bash, Read
 | Canonical | Claude Code | Cursor | Windsurf/Devin | Codex | Continue |
 | --- | --- | --- | --- | --- | --- |
 | rule | `.claude/rules/*.md` | `.cursor/rules/*.mdc` | `.devin/rules/*.md` | managed `AGENTS.md`, plus conditional `rule-*` skills | `rule-*` prompts |
-| command | `.claude/commands/*.md` and `.claude/skills/*` | `.cursor/commands/*.md` | `.windsurf/workflows/*.md` | explicit `command-*` skills | prompts |
+| command | `.claude/commands/*.md` and `.claude/skills/*` | `.cursor/commands/*.md` | `.windsurf/workflows/*.md` | explicit `command-*` skills shown as `⚡ /name` | prompts |
 | skill | `.claude/skills/*/SKILL.md` | `.cursor/skills/*/SKILL.md` | `.windsurf/skills/*/SKILL.md` | `.agents/skills/*/SKILL.md` | prompts |
 | agent | `.claude/agents/*.md` | `.cursor/agents/*.md` | degraded `agent-*` skills | `.codex/agents/*.toml` | `agent-*` prompts |
 

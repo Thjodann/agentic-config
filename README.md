@@ -82,6 +82,9 @@ prompt, or callable skill. In all cases, the maintainer helper should run
 `./sync-agentic.sh doctor`, choose the safe workflow, edit canonical `.ai/` files,
 and finish with `./sync-agentic.sh` plus `./sync-agentic.sh --check`.
 
+In Codex, generated manual commands are explicit-only skills and display with a
+`⚡ /command-name` label so they stand apart from reusable skills.
+
 Use the raw CLI when you are scripting, debugging CI, or want exact control. Use the
 installed skill for everyday team contributions.
 
