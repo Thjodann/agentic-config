@@ -2,7 +2,7 @@
 # Manage per-IDE agentic config from canonical .ai/ config. See .ai/README.md.
 #
 #   ./sync-agentic.sh                         regenerate all IDE folders
-#   ./sync-agentic.sh --check                 fail if generated output is stale
+#   ./sync-agentic.sh check                   fail if generated output is stale
 #   ./sync-agentic.sh doctor                  diagnose native-only/stale/conflicts
 #   ./sync-agentic.sh adopt cursor <path>     promote native config into .ai/
 #   ./sync-agentic.sh reconcile --all-exact   canonicalize exact duplicates

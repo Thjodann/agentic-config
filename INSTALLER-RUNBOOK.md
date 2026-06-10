@@ -13,7 +13,7 @@ Bring a target repository up to the standard Agentic Config Kit setup:
 - source-only Git hygiene for generated IDE folders;
 - root `AGENTS.md` bootstrap guidance;
 - built-in `agentic-config-maintainer` skill and `/agentic-config` command;
-- verification with `doctor`, `--check`, and optional pre-commit guard.
+- verification with `doctor`, `check`, and optional pre-commit guard.
 
 Prefer the CLI path:
 
@@ -213,7 +213,7 @@ agentic-config check
 
 Expected:
 
-- `--check` reports generated entries are in sync.
+- `check` reports generated entries are in sync.
 - `doctor` may report degraded mappings because not every IDE has identical concepts.
   That is acceptable.
 - `doctor` may report global user-level overlaps from folders such as `~/.codex/`

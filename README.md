@@ -299,7 +299,7 @@ agentic-config bootstrap
 Recommended source-only commit:
 
 ```bash
-git add .ai .gitignore AGENTS.md sync-agentic.sh README.md hooks tests
+git add .ai .gitignore AGENTS.md sync-agentic.sh
 git commit -m "Add shared agentic config"
 ```
 
