@@ -50,10 +50,10 @@ From this checkout:
 ./install-agentic-config.sh
 ```
 
-Or via curl once this repo is available from your internal Git host:
+Or via curl from the public repo:
 
 ```bash
-curl -fsSL <agentic-config-kit-install-url> | sh
+curl -fsSL https://raw.githubusercontent.com/thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 ```
 
 The installer copies the CLI and bundled templates to:

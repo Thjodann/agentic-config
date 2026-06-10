@@ -10,7 +10,7 @@ set -eu
 
 INSTALL_DIR="${AGENTIC_CONFIG_HOME:-$HOME/.local/share/agentic-config-kit}"
 BIN_DIR="${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}"
-ARCHIVE_URL="${AGENTIC_CONFIG_ARCHIVE_URL:-https://github.boozallencsn.com/CORNERSTONE/agentic-config-kit/archive/refs/heads/main.tar.gz}"
+ARCHIVE_URL="${AGENTIC_CONFIG_ARCHIVE_URL:-https://github.com/thjodann/agentic-config-kit/archive/refs/heads/main.tar.gz}"
 
 tmp_dir=""
 cleanup() {
