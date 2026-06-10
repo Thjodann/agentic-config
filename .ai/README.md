@@ -33,6 +33,14 @@ agentic IDE they use.
 ## Commands
 
 ```bash
+agentic-config sync
+agentic-config check
+agentic-config doctor
+agentic-config bootstrap
+agentic-config adopt cursor .cursor/rules/my-rule.mdc
+agentic-config reconcile --all-exact
+agentic-config clean
+
 ./sync-agentic.sh
 ./sync-agentic.sh sync
 ./sync-agentic.sh --check
@@ -51,10 +59,17 @@ agentic IDE they use.
 ./sync-agentic.sh bootstrap
 ```
 
-`doctor` reports native-only assets, stale generated files, canonical conflicts, and
-known degradations. `adopt` promotes native IDE files into `.ai/`; `reconcile`
-canonicalizes exact duplicate native assets; `clean` removes generated local
-projections; `bootstrap` generates projections after clone.
+`agentic-config` is the preferred interface. `./sync-agentic.sh` remains the
+repo-local compatibility wrapper. `doctor` reports native-only assets, stale
+generated files, canonical conflicts, and known degradations. `adopt` promotes
+native IDE files into `.ai/`; `reconcile` canonicalizes exact duplicate native
+assets; `clean` removes generated local projections; `bootstrap` generates
+projections after clone.
+
+The compiler can also run from an external canonical source by setting
+`AGENTIC_CONFIG_REPO_ROOT` and `AGENTIC_CONFIG_AI_DIR`. The CLI uses this for
+stealth mode, where local source lives in `.agentic-config/.ai/` while generated
+IDE projections still land in the repo root.
 
 ## Canonical Frontmatter
 
@@ -126,19 +141,19 @@ guidance. `doctor` flags them as Codex-only instead of adopting them as team rul
 ## Native Contribution Workflow
 
 1. Create the asset in your IDE.
-2. Run `./sync-agentic.sh doctor`.
+2. Run `agentic-config doctor`.
 3. Adopt the native file into `.ai/`.
-4. Run `./sync-agentic.sh`.
+4. Run `agentic-config sync`.
 5. Commit `.ai/`, `.ai/.manifest.json`, root `AGENTS.md`, and toolkit files. In
    source-only mode, leave generated IDE folders ignored.
 
 Examples:
 
 ```bash
-./sync-agentic.sh adopt cursor .cursor/rules/service-style.mdc
-./sync-agentic.sh adopt windsurf .windsurf/workflows/release-check.md
-./sync-agentic.sh adopt codex .codex/agents/reviewer.toml
-./sync-agentic.sh
+agentic-config adopt cursor .cursor/rules/service-style.mdc
+agentic-config adopt windsurf .windsurf/workflows/release-check.md
+agentic-config adopt codex .codex/agents/reviewer.toml
+agentic-config sync
 ```
 
 ## Source-Only Workflow
@@ -148,16 +163,16 @@ Generated IDE folders are local projections and may be ignored by Git. Commit `.
 developer can run this after cloning:
 
 ```bash
-./sync-agentic.sh bootstrap
+agentic-config bootstrap
 ```
 
 If several teammates created the same native skill/rule/command/agent before adopting
 it, use:
 
 ```bash
-./sync-agentic.sh doctor
-./sync-agentic.sh reconcile --all-exact
-./sync-agentic.sh
+agentic-config doctor
+agentic-config reconcile --all-exact
+agentic-config sync
 ```
 
 `doctor` never changes files. `reconcile` only auto-merges exact normalized duplicates.
@@ -170,7 +185,7 @@ canonical asset from `.ai/` and rerunning sync prunes only files or managed bloc
 still look like this tool's output. Markerless human files at generated paths are
 reported instead of overwritten or deleted.
 
-`./sync-agentic.sh clean` removes generated IDE projection files listed in the manifest
+`agentic-config clean` removes generated IDE projection files listed in the manifest
 while keeping `.ai/` and root `AGENTS.md`. It refuses markerless files whose bytes no
 longer match the manifest hash. Add `--native-duplicates` only when you want to remove
 unmanaged native files that exactly match canonical assets.

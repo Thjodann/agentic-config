@@ -1,11 +1,15 @@
 #!/bin/bash
-# Install the agentic-config-kit into a target repository.
+# Legacy installer for putting Agentic Config Kit into a target repository.
 #
 #   ./install.sh [target-repo-dir]   (default: current directory)
 #
-# Copies the canonical .ai/ master + ./sync-agentic.sh into the target repo, runs an
-# initial sync, and offers to install the pre-commit staleness guard. Non-destructive:
-# refuses to overwrite an existing .ai/ folder.
+# Prefer the global CLI when available:
+#
+#   agentic-config init [target-repo-dir]
+#
+# This fallback copies the canonical .ai/ master + ./sync-agentic.sh into the
+# target repo, runs an initial sync, and offers to install the pre-commit
+# staleness guard. Non-destructive: refuses to overwrite an existing .ai/ folder.
 set -euo pipefail
 
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -37,6 +41,7 @@ if [ -f "$TARGET/.gitignore" ]; then
         {
             echo ""
             echo "$IGNORE_BLOCK_START"
+            echo ".agentic-config/"
             echo ".claude/"
             echo ".cursor/"
             echo ".devin/"
@@ -88,4 +93,5 @@ fi
 
 echo ""
 echo "🎉 Done. Edit assets in $TARGET/.ai/, then run ./sync-agentic.sh."
+echo "   With the global CLI installed, you can also run: agentic-config sync"
 echo "   Docs: $TARGET/.ai/README.md"

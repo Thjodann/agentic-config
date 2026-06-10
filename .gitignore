@@ -1,4 +1,5 @@
-# Generated agentic IDE projections. The canonical source is `.ai/`.
+# Generated/local agentic IDE projections. The canonical source is `.ai/`.
+.agentic-config/
 .claude/
 .cursor/
 .devin/
