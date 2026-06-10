@@ -236,6 +236,20 @@ Native rule.
         self.assertIn("Generated but stale", result.stdout)
         self.assertIn("Degraded mappings", result.stdout)
 
+    def test_doctor_quotes_native_paths_with_spaces(self):
+        write(self.path(".cursor", "commands", "📋 plan.md"), """---
+description: Plan the work.
+---
+
+Make a plan.
+""")
+
+        result = self.run_sync("doctor", check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "./sync-agentic.sh adopt cursor '.cursor/commands/📋 plan.md'",
+            result.stdout)
+
     def test_codex_rules_are_reported_as_policy_not_portable_rules(self):
         write(self.path(".codex", "rules", "default.rules"), "prefix_rule(pattern=[\"git\"], decision=\"prompt\")\n")
         result = self.run_sync("doctor", check=False)
@@ -504,6 +518,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(0, doctor.returncode)
         self.assertIn("Degraded mappings", doctor.stdout)
         check = self.run_cli("check")
+        self.assertIn(".agentic-config/.ai master", check.stdout)
+
+    def test_proxy_uses_bundled_sync_engine_for_existing_stealth_repo(self):
+        self.init_git()
+        self.run_cli("init", "--stealth", self.tmp)
+        write(self.path(".agentic-config", ".ai", "sync.py"),
+              "raise SystemExit('stale local sync should not run')\n")
+
+        check = self.run_cli("check")
+        self.assertEqual(0, check.returncode)
         self.assertIn(".agentic-config/.ai master", check.stdout)
 
     def test_curl_installer_installs_cli_and_help_runs(self):

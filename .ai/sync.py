@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -105,6 +106,14 @@ def source_rel(*parts):
 def add_stealth_skip(message):
     if message not in STEALTH_SKIPS:
         STEALTH_SKIPS.append(message)
+
+
+def shell_quote(value):
+    return shlex.quote(str(value))
+
+
+def shell_command(parts):
+    return " ".join(shell_quote(p) for p in parts)
 
 
 def read_text(path):
@@ -1416,26 +1425,29 @@ def command_doctor(args):
             print("  %s %s:" % (asset["type"], asset["name"]))
             for record in group:
                 print("    %s" % record["path"])
-            print("    suggested: %s reconcile %s %s" %
-                  (COMMAND_NAME, asset["type"], asset["name"]))
-        print("  all exact groups: %s reconcile --all-exact" % COMMAND_NAME)
+            print("    suggested: %s" % shell_command([
+                COMMAND_NAME, "reconcile", asset["type"], asset["name"]]))
+        print("  all exact groups: %s" %
+              shell_command([COMMAND_NAME, "reconcile", "--all-exact"]))
     if state["represented"]:
         print("Native duplicates already represented in %s/:" % AI_REL)
         for record in state["represented"]:
             asset = record["asset"]
             print("  %s -> %s %s %s" %
                   (record["path"], AI_REL, asset["type"], asset["name"]))
-        print("  optional cleanup: %s clean --native-duplicates" % COMMAND_NAME)
+        print("  optional cleanup: %s" %
+              shell_command([COMMAND_NAME, "clean", "--native-duplicates"]))
     if state["native_only"]:
         print("Native-only assets:")
         for record in state["native_only"]:
-            print("  %s: native-only, run %s adopt %s %s" %
-                  (record["path"], COMMAND_NAME, record["ide"], record["path"]))
+            print("  %s: native-only, run %s" %
+                  (record["path"], shell_command([
+                      COMMAND_NAME, "adopt", record["ide"], record["path"]])))
     if state["drift"]:
         print("Generated but stale:")
         for item in state["drift"]:
             print("  %s" % item)
-        print("  run %s" % COMMAND_NAME)
+        print("  run %s" % shell_command([COMMAND_NAME]))
     if conflicts:
         print("Canonical conflicts:")
         for item in conflicts:

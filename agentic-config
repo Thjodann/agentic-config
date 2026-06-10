@@ -148,8 +148,11 @@ def run_sync(repo, ai_dir, args, stealth=False):
         env["AGENTIC_CONFIG_STEALTH"] = "1"
     else:
         env.pop("AGENTIC_CONFIG_STEALTH", None)
+    runner = os.path.join(KIT_DIR, ".ai", "sync.py")
+    if not os.path.isfile(runner):
+        runner = os.path.join(ai_dir, "sync.py")
     return subprocess.call(
-        [sys.executable, os.path.join(ai_dir, "sync.py")] + list(args),
+        [sys.executable, runner] + list(args),
         cwd=repo, env=env)
 
 
