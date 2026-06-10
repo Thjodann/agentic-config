@@ -305,3 +305,7 @@ the closest available projection.
   that are already represented in `.ai/`.
 - Keep Codex `.codex/rules/*.rules` as Codex-only execution policy; these are not
   portable behavioral rules.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
