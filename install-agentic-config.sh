@@ -41,7 +41,7 @@ if [ -z "$source_dir" ]; then
     echo "Downloading Agentic Config Kit..."
     curl -fsSL "$ARCHIVE_URL" -o "$archive"
     tar -xzf "$archive" -C "$tmp_dir"
-    source_dir=$(find "$tmp_dir" -maxdepth 1 -type d -name "agentic-config-kit*" | head -n 1)
+    source_dir=$(find "$tmp_dir"/* -maxdepth 0 -type d -name "agentic-config-kit*" | head -n 1)
 fi
 
 if [ ! -f "$source_dir/agentic-config" ] || [ ! -d "$source_dir/.ai" ]; then

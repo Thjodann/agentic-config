@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -725,6 +726,45 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, help_result.returncode, help_result.stdout)
         self.assertIn("agentic-config init", help_result.stdout)
+
+    def test_curl_pipe_installer_uses_extracted_archive_child(self):
+        archive_path = self.path("agentic-config-kit-main.tar.gz")
+        archive_root = "agentic-config-kit-main"
+        with tarfile.open(archive_path, "w:gz") as tar:
+            for rel in [
+                ".ai",
+                "hooks",
+                "assets",
+                "agentic-config",
+                "sync-agentic.sh",
+                "install.sh",
+                "install-agentic-config.sh",
+                "README.md",
+                "INSTALLER-RUNBOOK.md",
+                ".gitignore",
+            ]:
+                src = os.path.join(ROOT, rel)
+                if os.path.exists(src):
+                    tar.add(src, arcname=os.path.join(archive_root, rel))
+
+        install_home = self.path("downloaded", "share", "agentic-config-kit")
+        install_bin = self.path("downloaded", "bin")
+        env = dict(self.env)
+        env.pop("AGENTIC_CONFIG_SOURCE_DIR", None)
+        env["AGENTIC_CONFIG_ARCHIVE_URL"] = "file://%s" % archive_path
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        result = subprocess.run(
+            ["sh", "-s"],
+            input=read(CLI_INSTALLER_SRC),
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertTrue(os.path.exists(os.path.join(install_home, ".ai", "sync.py")))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
 
 
 class PreCommitTests(SyncRepo):
