@@ -4,6 +4,14 @@ All notable changes to Agentic Config are tracked here.
 
 ## Unreleased
 
+- Add intent-level CLI commands: `agentic setup`, `agentic status`, and
+  `agentic import`. Existing implementation commands remain available as
+  advanced/backward-compatible commands.
+- Reorder CLI help and docs around common workflows first, with advanced verbs
+  (`doctor`, `check`, `adopt`, `reconcile`, `bootstrap`, `demote`, `promote`)
+  retained for scripts and expert use.
+- Add prioritized status output that separates Blocking, Needs update,
+  Recommended cleanup, Optional/informational notes, and Next step.
 - Fix `adopt --all` so one conflicting asset no longer aborts the whole run. It
   now adopts every unambiguous native asset, skips conflicts and
   already-represented surfaces with a per-file reason, and prints a summary that

@@ -1,7 +1,7 @@
 {
   "outputs": [
     {
-      "hash": "fe303713b330c7af9e01a1e59266f538ec727bc1087a9b37378fea498145c7ce",
+      "hash": "50733efa775a2651d1bf94c2f636a27e8833b47e43aeb4c606f5440810289545",
       "kind": "skill",
       "mode": "file",
       "path": ".agents/skills/agentic-config-maintainer/SKILL.md",
@@ -17,7 +17,7 @@
       "target": "codex"
     },
     {
-      "hash": "f27a821f67fd0cb669ab513c36c2183c82dc291ccc5e10acfe1981cd5281bda9",
+      "hash": "377358440f666724d1fa546ad34eee802434212913baed9f29a29dbdf5cf0bba",
       "kind": "command",
       "mode": "file",
       "path": ".agents/skills/command-agentic-config/SKILL.md",
@@ -25,7 +25,7 @@
       "target": "codex"
     },
     {
-      "hash": "876478f8d44db8ac9c3b72dd243103b3dcd8a92f082b9562b33570947bed6fc9",
+      "hash": "8be7dc0a27b7e5ec0bcd3c959a8a3441104936d9913f0f111cd98fef41b5f7d8",
       "kind": "command",
       "mode": "file",
       "path": ".agents/skills/command-agentic-config/agents/openai.yaml",
@@ -81,7 +81,7 @@
       "target": "claude"
     },
     {
-      "hash": "8e58c060e08c7bd241f12e9b0a9e1900b4969ee3bd02497715e659d97b8bc883",
+      "hash": "5310713832ab556d61dba75af2a29f8dc5b9977a9e0a101fbf2a5572eeb7e069",
       "kind": "command",
       "mode": "file",
       "path": ".claude/commands/agentic-config.md",
@@ -105,7 +105,7 @@
       "target": "claude"
     },
     {
-      "hash": "fe303713b330c7af9e01a1e59266f538ec727bc1087a9b37378fea498145c7ce",
+      "hash": "50733efa775a2651d1bf94c2f636a27e8833b47e43aeb4c606f5440810289545",
       "kind": "skill",
       "mode": "file",
       "path": ".claude/skills/agentic-config-maintainer/SKILL.md",
@@ -121,7 +121,7 @@
       "target": "claude"
     },
     {
-      "hash": "6202795b1ccc2ad24f03a83d9922468b8edc9ab53c004a1ca1974dab578d219a",
+      "hash": "d8b19dafe09f5f0988f917e4260ea8953af5ad30610df44845209609aae36f7e",
       "kind": "command",
       "mode": "file",
       "path": ".claude/skills/agentic-config/SKILL.md",
@@ -161,7 +161,7 @@
       "target": "continue"
     },
     {
-      "hash": "6143bfd4c2bed12d95409a2f16d92977211c4096f32b797ae552c0ccb4e65e76",
+      "hash": "a4dff8691a9e21bbfa40a5b735096f336a65959c92b297f8ca1860bb7616cd33",
       "kind": "skill",
       "mode": "file",
       "path": ".continue/prompts/agentic-config-maintainer.md",
@@ -169,7 +169,7 @@
       "target": "continue"
     },
     {
-      "hash": "d22483207ad9e4b9eacaa542537e483c4a0eefa6e68eed47ffa988d312a0b970",
+      "hash": "350b9a2e41a84d1e354cc7018b3e9bcaef45805895873988d608d4551b6bc495",
       "kind": "command",
       "mode": "file",
       "path": ".continue/prompts/agentic-config.md",
@@ -209,7 +209,7 @@
       "target": "cursor"
     },
     {
-      "hash": "8e58c060e08c7bd241f12e9b0a9e1900b4969ee3bd02497715e659d97b8bc883",
+      "hash": "5310713832ab556d61dba75af2a29f8dc5b9977a9e0a101fbf2a5572eeb7e069",
       "kind": "command",
       "mode": "file",
       "path": ".cursor/commands/agentic-config.md",
@@ -233,7 +233,7 @@
       "target": "cursor"
     },
     {
-      "hash": "fe303713b330c7af9e01a1e59266f538ec727bc1087a9b37378fea498145c7ce",
+      "hash": "50733efa775a2651d1bf94c2f636a27e8833b47e43aeb4c606f5440810289545",
       "kind": "skill",
       "mode": "file",
       "path": ".cursor/skills/agentic-config-maintainer/SKILL.md",
@@ -273,7 +273,7 @@
       "target": "windsurf"
     },
     {
-      "hash": "fe303713b330c7af9e01a1e59266f538ec727bc1087a9b37378fea498145c7ce",
+      "hash": "50733efa775a2651d1bf94c2f636a27e8833b47e43aeb4c606f5440810289545",
       "kind": "skill",
       "mode": "file",
       "path": ".windsurf/skills/agentic-config-maintainer/SKILL.md",
@@ -297,7 +297,7 @@
       "target": "windsurf"
     },
     {
-      "hash": "b9197bcc611d73b62ca8e09812e177313a7326499cb99ebced244437186e2224",
+      "hash": "acc20600f341dc2a21596d587b1a349e82d09161322cb26a68cf2c525963c961",
       "kind": "command",
       "mode": "file",
       "path": ".windsurf/workflows/agentic-config.md",
