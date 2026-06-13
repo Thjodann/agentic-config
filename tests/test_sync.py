@@ -99,7 +99,7 @@ class VersionUpdateTests(unittest.TestCase):
             "curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh",
             readme)
         self.assertIn("[AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md)", readme)
-        self.assertIn("agentic init --stealth .", readme)
+        self.assertIn("agentic setup --stealth .", readme)
         self.assertNotIn("agc init", readme)
         self.assertNotIn("Agentic Config Kit, or ACK", readme)
         self.assertIn("model-agnostic and operating-system-agnostic", agent_runbook)
@@ -1001,6 +1001,80 @@ class CliTests(unittest.TestCase):
         check = self.run_cli("check")
         self.assertIn("In sync", check.stdout)
 
+    def test_setup_initializes_then_bootstraps_existing_config(self):
+        self.init_git()
+        result = self.run_cli("setup", self.tmp)
+        self.assertIn("Installed canonical config", result.stdout)
+        self.assertTrue(os.path.exists(self.path(".ai", "sync.py")))
+
+        generated = self.path(".cursor", "commands", "example-summarize.md")
+        os.remove(generated)
+        second = self.run_cli("setup", self.tmp)
+        self.assertIn("Using existing normal Agentic Config source", second.stdout)
+        self.assertTrue(os.path.exists(generated))
+        self.assertIn("Agentic Config Status", second.stdout)
+
+    def test_setup_stealth_initializes_local_config(self):
+        self.init_git()
+        result = self.run_cli("setup", "--stealth", self.tmp)
+        self.assertIn("Stealth setup complete", result.stdout)
+        self.assertTrue(os.path.exists(self.path(".agentic-config", ".ai", "sync.py")))
+        self.assertEqual("", self.git("status", "--short").stdout.strip())
+
+    def test_setup_inside_nested_git_repo_ignores_parent_ai(self):
+        if shutil.which("git") is None:
+            self.skipTest("git is not available")
+        write(self.path(".ai", "sync.py"), "# parent source should not be discovered\n")
+        nested = self.path("nested")
+        os.makedirs(nested)
+        subprocess.check_call(["git", "init"], cwd=nested,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        result = self.run_cli("setup", "--stealth", ".", cwd=nested)
+        self.assertIn("Stealth setup complete", result.stdout)
+        self.assertNotIn("Using existing normal Agentic Config source", result.stdout)
+        self.assertTrue(os.path.exists(
+            os.path.join(nested, ".agentic-config", ".ai", "sync.py")))
+
+    def test_status_check_alias_uses_check_output(self):
+        self.init_git()
+        self.run_cli("setup", self.tmp)
+        result = self.run_cli("status", "--check", cwd=self.tmp)
+        self.assertIn("In sync", result.stdout)
+
+    def test_import_all_wraps_adopt_and_reports_status(self):
+        self.init_git()
+        self.run_cli("setup", self.tmp)
+        write(self.path(".cursor", "rules", "api.mdc"), """---
+description: API route conventions.
+---
+
+Use service boundaries.
+""")
+
+        result = self.run_cli("import", "--all", cwd=self.tmp, check=False)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("adopted .cursor/rules/api.mdc -> .ai/rules/api.md", result.stdout)
+        self.assertIn("Import status:", result.stdout)
+        self.assertIn("Needs update:", result.stdout)
+        self.assertTrue(os.path.exists(self.path(".ai", "rules", "api.md")))
+
+    def test_import_path_infers_ide_from_native_path(self):
+        self.init_git()
+        self.run_cli("setup", self.tmp)
+        write(self.path(".cursor", "rules", "api.mdc"), """---
+description: API route conventions.
+---
+
+Use service boundaries.
+""")
+
+        result = self.run_cli(
+            "import", ".cursor/rules/api.mdc", cwd=self.tmp, check=False)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("adopted .cursor/rules/api.mdc -> .ai/rules/api.md", result.stdout)
+        self.assertIn("Import status:", result.stdout)
+
     def test_agentic_config_init_stealth_has_no_tracked_git_changes(self):
         self.init_git()
         result = self.run_cli("init", "--stealth", self.tmp)
@@ -1138,7 +1212,7 @@ class CliTests(unittest.TestCase):
         self.assertTrue(os.path.exists(installed_agc))
         self.assertIn("cli: %s" % installed_agentic, result.stdout)
         self.assertIn("compatibility: %s" % installed_cli, result.stdout)
-        self.assertIn("Next:\n  agentic init", result.stdout)
+        self.assertIn("Next:\n  agentic setup", result.stdout)
         self.assertTrue(os.path.exists(os.path.join(
             install_home, "uninstall-agentic-config.sh")))
         self.assertTrue(os.path.exists(os.path.join(
@@ -1153,7 +1227,7 @@ class CliTests(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, help_result.returncode, help_result.stdout)
-        self.assertIn("agentic init", help_result.stdout)
+        self.assertIn("agentic setup", help_result.stdout)
         agentic_result = subprocess.run(
             [installed_agentic, "--version"],
             cwd=self.tmp,
@@ -1447,7 +1521,7 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertIn("agentic skipped", result.stdout)
-        self.assertIn("Next:\n  agentic-config init", result.stdout)
+        self.assertIn("Next:\n  agentic-config setup", result.stdout)
         self.assertEqual("#!/bin/sh\necho foreign\n", read(foreign_agentic))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
 
