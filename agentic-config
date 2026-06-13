@@ -22,7 +22,7 @@ KIT_DIR = os.path.dirname(os.path.realpath(__file__))
 if os.environ.get("AGENTIC_CONFIG_KIT_DIR"):
     KIT_DIR = os.path.abspath(os.environ["AGENTIC_CONFIG_KIT_DIR"])
 
-REPO_SLUG = "Thjodann/agentic-config-kit"
+REPO_SLUG = "Thjodann/agentic-config"
 GITHUB_BASE = "https://github.com/%s" % REPO_SLUG
 GITHUB_API_BASE = "https://api.github.com/repos/%s" % REPO_SLUG
 DEFAULT_RELEASE_API_URL = "%s/releases/latest" % GITHUB_API_BASE
@@ -311,7 +311,7 @@ def ensure_kit():
         eprint("ERROR: %s cannot find its bundled files." % command_name())
         for p in missing:
             eprint("  missing %s" % p)
-        eprint("Set AGENTIC_CONFIG_KIT_DIR to a full agentic-config-kit checkout.")
+        eprint("Set AGENTIC_CONFIG_KIT_DIR to a full Agentic Config checkout.")
         return False
     return True
 

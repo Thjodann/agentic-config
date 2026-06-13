@@ -92,30 +92,29 @@ class VersionUpdateTests(unittest.TestCase):
 
     def test_docs_include_curl_and_agent_install_prompt(self):
         readme = read(os.path.join(ROOT, "README.md"))
+        agent_runbook = read(os.path.join(ROOT, "AGENTIC-CONFIG-RUNBOOK.md"))
         install_runbook = read(os.path.join(ROOT, "INSTALLER-RUNBOOK.md"))
         update_runbook = read(os.path.join(ROOT, "AGENT-ASSISTED-UPDATE-RUNBOOK.md"))
         self.assertIn(
-            "curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh",
+            "curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh",
             readme)
-        self.assertIn("[INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md)", readme)
-        self.assertIn(
-            "[AGENT-ASSISTED-UPDATE-RUNBOOK.md](AGENT-ASSISTED-UPDATE-RUNBOOK.md)",
-            readme)
+        self.assertIn("[AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md)", readme)
         self.assertIn("agentic init --stealth .", readme)
         self.assertNotIn("agc init", readme)
         self.assertNotIn("Agentic Config Kit, or ACK", readme)
-        self.assertIn("model-agnostic and operating-system-agnostic", update_runbook)
-        self.assertIn("Model Suitability Notice", install_runbook)
-        self.assertIn("Model Suitability Notice", update_runbook)
-        self.assertIn("stronger coding/reasoning model", install_runbook)
-        self.assertIn("latest stable GitHub Release", update_runbook)
-        self.assertIn("Never run angle-bracket placeholders literally", update_runbook)
+        self.assertIn("model-agnostic and operating-system-agnostic", agent_runbook)
+        self.assertIn("Model Suitability Notice", agent_runbook)
+        self.assertIn("stronger coding/reasoning model", agent_runbook)
+        self.assertIn("latest stable GitHub Release", agent_runbook)
+        self.assertIn("Never run angle-bracket placeholders literally", agent_runbook)
+        self.assertIn("AGENTIC-CONFIG-RUNBOOK.md", install_runbook)
+        self.assertIn("AGENTIC-CONFIG-RUNBOOK.md", update_runbook)
         self.assertIn("sh -n install-agentic-config.sh\nsh -n uninstall-agentic-config.sh\nsh -n sync-agentic.sh\nsh -n install.sh",
-                      update_runbook)
+                      agent_runbook)
         self.assertIn("agentic uninstall --dry-run", readme)
         self.assertIn("uninstall-agentic-config.sh | sh", readme)
-        self.assertIn("sh -n uninstall-agentic-config.sh", update_runbook)
-        self.assertNotIn("remote default branch HEAD", update_runbook)
+        self.assertIn("sh -n uninstall-agentic-config.sh", agent_runbook)
+        self.assertNotIn("remote default branch HEAD", agent_runbook)
 
 
 class SyncRepo(unittest.TestCase):
@@ -871,8 +870,8 @@ class CliTests(unittest.TestCase):
         self.git("commit", "-m", message)
 
     def make_release_archive(self, version="0.2.0"):
-        archive_path = self.path("agentic-config-kit-%s.tar.gz" % version)
-        archive_root = "agentic-config-kit-v%s" % version
+        archive_path = self.path("agentic-config-%s.tar.gz" % version)
+        archive_root = "agentic-config-v%s" % version
         with tarfile.open(archive_path, "w:gz") as tar:
             for rel in [
                 ".ai",
@@ -884,6 +883,7 @@ class CliTests(unittest.TestCase):
                 "install-agentic-config.sh",
                 "uninstall-agentic-config.sh",
                 "README.md",
+                "AGENTIC-CONFIG-RUNBOOK.md",
                 "INSTALLER-RUNBOOK.md",
                 "AGENT-ASSISTED-UPDATE-RUNBOOK.md",
                 "CHANGELOG.md",
@@ -1262,8 +1262,8 @@ class CliTests(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
 
     def test_curl_pipe_installer_uses_extracted_archive_child(self):
-        archive_path = self.path("agentic-config-kit-main.tar.gz")
-        archive_root = "agentic-config-kit-main"
+        archive_path = self.path("agentic-config-main.tar.gz")
+        archive_root = "agentic-config-main"
         with tarfile.open(archive_path, "w:gz") as tar:
             for rel in [
                 ".ai",
@@ -1275,6 +1275,7 @@ class CliTests(unittest.TestCase):
                 "install-agentic-config.sh",
                 "uninstall-agentic-config.sh",
                 "README.md",
+                "AGENTIC-CONFIG-RUNBOOK.md",
                 "INSTALLER-RUNBOOK.md",
                 "AGENT-ASSISTED-UPDATE-RUNBOOK.md",
                 "VERSION",

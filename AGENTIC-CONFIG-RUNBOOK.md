@@ -138,7 +138,7 @@ For a specific release:
 If the CLI is not installed yet, the installer resolves the latest stable release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
 
 Use a branch, tag, ref, or local checkout only when the user requested it. For a
@@ -146,9 +146,9 @@ branch or remote ref, use a clean committed source and record the commit SHA:
 
 ```bash
 git ls-remote <kit-remote-url> HEAD refs/heads/main
-git clone --depth 1 --branch main <kit-remote-url> <temp-dir>/agentic-config-kit
-git -C <temp-dir>/agentic-config-kit rev-parse HEAD
-git -C <temp-dir>/agentic-config-kit status --short --branch
+git clone --depth 1 --branch main <kit-remote-url> <temp-dir>/agentic-config
+git -C <temp-dir>/agentic-config rev-parse HEAD
+git -C <temp-dir>/agentic-config status --short --branch
 ```
 
 For a local checkout, verify it is clean first:
@@ -191,7 +191,7 @@ If `agentic` or `agentic-config` is not installed yet, install the latest stable
 GitHub Release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
 
 If working from a clean local kit checkout without network access:
@@ -449,7 +449,7 @@ agentic uninstall
 If `agentic` is unavailable, run the standalone uninstaller:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/uninstall-agentic-config.sh | sh
 ```
 
 Uninstall removes only the user-level Agentic Config CLI install and bundled kit
@@ -464,7 +464,7 @@ For a clean reinstall:
 
 ```bash
 agentic uninstall
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 agentic --version
 ```
 
@@ -548,7 +548,7 @@ Please install, update, verify, uninstall, or clean reinstall Agentic Config for
 this repo, depending on what is needed.
 
 Runbook:
-https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/AGENTIC-CONFIG-RUNBOOK.md
+https://raw.githubusercontent.com/Thjodann/agentic-config/main/AGENTIC-CONFIG-RUNBOOK.md
 
 Use the runbook's process order exactly, but translate shell syntax for this
 environment when needed. Prefer the latest stable GitHub Release. Do not install

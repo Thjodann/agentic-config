@@ -5,13 +5,13 @@
 #   curl -fsSL <install-script-url> | sh
 #
 # Local/test use:
-#   AGENTIC_CONFIG_SOURCE_DIR=/path/to/agentic-config-kit sh install-agentic-config.sh
+#   AGENTIC_CONFIG_SOURCE_DIR=/path/to/agentic-config sh install-agentic-config.sh
 set -eu
 
 INSTALL_DIR="${AGENTIC_CONFIG_HOME:-$HOME/.local/share/agentic-config-kit}"
 BIN_DIR="${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}"
-RELEASE_API_URL="${AGENTIC_CONFIG_RELEASE_API_URL:-https://api.github.com/repos/Thjodann/agentic-config-kit/releases/latest}"
-RELEASE_ARCHIVE_BASE="${AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE:-https://github.com/Thjodann/agentic-config-kit/archive/refs/tags}"
+RELEASE_API_URL="${AGENTIC_CONFIG_RELEASE_API_URL:-https://api.github.com/repos/Thjodann/agentic-config/releases/latest}"
+RELEASE_ARCHIVE_BASE="${AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE:-https://github.com/Thjodann/agentic-config/archive/refs/tags}"
 ARCHIVE_URL="${AGENTIC_CONFIG_ARCHIVE_URL:-}"
 
 tmp_dir=""
@@ -38,7 +38,7 @@ if [ -z "$source_dir" ]; then
         echo "ERROR: tar is required unless AGENTIC_CONFIG_SOURCE_DIR is set." >&2
         exit 1
     }
-    tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/agentic-config-kit.XXXXXX")
+    tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/agentic-config.XXXXXX")
     archive="$tmp_dir/kit.tar.gz"
     if [ -z "$ARCHIVE_URL" ]; then
         echo "Checking latest Agentic Config release..."
@@ -55,7 +55,7 @@ if [ -z "$source_dir" ]; then
     fi
     curl -fsSL "$ARCHIVE_URL" -o "$archive"
     tar -xzf "$archive" -C "$tmp_dir"
-    source_dir=$(find "$tmp_dir"/* -maxdepth 0 -type d -name "agentic-config-kit*" | head -n 1)
+    source_dir=$(find "$tmp_dir"/* -maxdepth 0 -type d -name "agentic-config*" | head -n 1)
 fi
 
 if [ ! -f "$source_dir/agentic-config" ] || [ ! -d "$source_dir/.ai" ]; then
@@ -70,7 +70,7 @@ cp -R "$source_dir/.ai" "$INSTALL_DIR/.ai"
 [ -d "$source_dir/hooks" ] && cp -R "$source_dir/hooks" "$INSTALL_DIR/hooks"
 [ -d "$source_dir/assets" ] && cp -R "$source_dir/assets" "$INSTALL_DIR/assets"
 
-for file in agentic-config sync-agentic.sh install.sh install-agentic-config.sh uninstall-agentic-config.sh README.md INSTALLER-RUNBOOK.md AGENT-ASSISTED-UPDATE-RUNBOOK.md VERSION CHANGELOG.md .gitignore; do
+for file in agentic-config sync-agentic.sh install.sh install-agentic-config.sh uninstall-agentic-config.sh README.md AGENTIC-CONFIG-RUNBOOK.md INSTALLER-RUNBOOK.md AGENT-ASSISTED-UPDATE-RUNBOOK.md VERSION CHANGELOG.md .gitignore; do
     if [ -f "$source_dir/$file" ]; then
         cp "$source_dir/$file" "$INSTALL_DIR/$file"
     fi

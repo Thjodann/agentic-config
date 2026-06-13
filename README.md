@@ -7,7 +7,7 @@ Agentic Config gives your repo one shared place for AI rules, commands, skills,
 and agents. It then creates the tool-specific files each AI coding environment
 expects.
 
-**Links:** [public repo](https://github.com/Thjodann/agentic-config-kit) ·
+**Links:** [public repo](https://github.com/Thjodann/agentic-config) ·
 [safe test repo](https://github.com/Thjodann/agentic-config-kit-test) ·
 [agent runbook](AGENTIC-CONFIG-RUNBOOK.md)
 
@@ -40,7 +40,7 @@ Requirement: `python3` 3.6 or newer.
 **1. Install Agentic Config**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
 
 **2. Open the repo you want to set up**
@@ -104,7 +104,7 @@ Paste this into your AI coding assistant from inside the target repo:
 Please install Agentic Config in this repo.
 
 Use this command if Agentic Config is not installed yet:
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 
 Then run:
 agentic init .
@@ -290,7 +290,7 @@ agentic uninstall
 If the installed command is unavailable, use the standalone uninstaller:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/uninstall-agentic-config.sh | sh
 ```
 
 Uninstall removes the Agentic Config-managed CLI files from your user account. It does not
@@ -337,7 +337,7 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
 
 ## 📚 More Detail
 
-- [github.com/Thjodann/agentic-config-kit](https://github.com/Thjodann/agentic-config-kit)
+- [github.com/Thjodann/agentic-config](https://github.com/Thjodann/agentic-config)
   is the public source repo.
 - [.ai/README.md](.ai/README.md) explains the canonical file format, frontmatter,
   mappings, safe deletes, and advanced workflows.
