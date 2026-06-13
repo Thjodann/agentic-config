@@ -11,7 +11,7 @@ expects.
 
 **Links:** [public repo](https://github.com/Thjodann/agentic-config-kit) ·
 [safe test repo](https://github.com/Thjodann/agentic-config-kit-test) ·
-[installer runbook](INSTALLER-RUNBOOK.md)
+[agent runbook](AGENTIC-CONFIG-RUNBOOK.md)
 
 ## 👀 At A Glance
 
@@ -120,9 +120,8 @@ Do not delete existing Cursor, Claude, Codex, Windsurf, Devin, or Continue files
 unless I explicitly ask. If doctor reports conflicts, stop and explain them.
 ```
 
-For full agent-assisted setup and update instructions, use
-[INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md) or
-[AGENT-ASSISTED-UPDATE-RUNBOOK.md](AGENT-ASSISTED-UPDATE-RUNBOOK.md).
+For full agent-assisted setup, update, verify, uninstall, and clean reinstall
+instructions, use [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md).
 
 ## 📦 What Agentic Config Adds To A Repo
 
@@ -336,7 +335,7 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
 | `agentic check` reports stale output | Run `agentic sync`, then run `agentic check` again. |
 | `agentic doctor` reports native-only files | Adopt them with `agentic adopt <ide> <path>`, use `agentic adopt --all`, or leave them native. |
 | Stealth mode skips a path | That path is already tracked by Git. Use normal mode, adopt the existing file, or resolve it manually. |
-| `curl` is blocked | Install from a local checkout with `./install-agentic-config.sh`, or ask an assistant to follow [INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md). |
+| `curl` is blocked | Install from a local checkout with `./install-agentic-config.sh`, or ask an assistant to follow [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md). |
 
 ## 📚 More Detail
 
@@ -344,10 +343,9 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
   is the public source repo.
 - [.ai/README.md](.ai/README.md) explains the canonical file format, frontmatter,
   mappings, safe deletes, and advanced workflows.
-- [INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md) is for assistants setting up Agentic Config in
-  another repo.
-- [AGENT-ASSISTED-UPDATE-RUNBOOK.md](AGENT-ASSISTED-UPDATE-RUNBOOK.md) is for
-  updating an existing Agentic Config setup safely.
+- [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md) is the canonical
+  runbook for assistants installing, updating, verifying, uninstalling, or clean
+  reinstalling Agentic Config.
 - [CHANGELOG.md](CHANGELOG.md) lists release changes.
 
 ## 🛡️ Guardrails
