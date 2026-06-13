@@ -76,13 +76,27 @@ class VersionUpdateTests(unittest.TestCase):
 
     def test_docs_include_curl_and_agent_install_prompt(self):
         readme = read(os.path.join(ROOT, "README.md"))
+        install_runbook = read(os.path.join(ROOT, "INSTALLER-RUNBOOK.md"))
+        update_runbook = read(os.path.join(ROOT, "AGENT-ASSISTED-UPDATE-RUNBOOK.md"))
         self.assertIn(
             "curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh",
             readme)
         self.assertIn(
             "https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/INSTALLER-RUNBOOK.md",
             readme)
+        self.assertIn(
+            "https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/AGENT-ASSISTED-UPDATE-RUNBOOK.md",
+            readme)
         self.assertIn("agc init --stealth .", readme)
+        self.assertIn("model-agnostic and operating-system-agnostic", update_runbook)
+        self.assertIn("Model Suitability Notice", install_runbook)
+        self.assertIn("Model Suitability Notice", update_runbook)
+        self.assertIn("stronger coding/reasoning model", readme)
+        self.assertIn("latest stable GitHub Release", update_runbook)
+        self.assertIn("Never run angle-bracket placeholders literally", update_runbook)
+        self.assertIn("sh -n install-agentic-config.sh\nsh -n sync-agentic.sh\nsh -n install.sh",
+                      update_runbook)
+        self.assertNotIn("remote default branch HEAD", update_runbook)
 
 
 class SyncRepo(unittest.TestCase):
@@ -167,6 +181,16 @@ description: Avoid one big commit.
 
 Review unstaged changes and prepare focused commits.
 """ % name)
+
+    def add_global_codex_skill(self, name="debugger", body="Debug from global config."):
+        write(os.path.join(self.home, ".codex", "skills", name, "SKILL.md"), """---
+name: %s
+description: Global %s skill.
+allowed-tools: Bash, Read
+---
+
+%s
+""" % (name, name, body))
 
 
 class SyncTests(SyncRepo):
@@ -426,7 +450,7 @@ Avoid one big commit.
         self.assertIn("Global native overlaps:", result.stdout)
         self.assertIn("Bootstrap complete", result.stdout)
 
-    def test_clean_global_native_duplicates_requires_global_flag(self):
+    def test_clean_global_native_duplicates_is_refused(self):
         self.add_skill("debugger")
         self.run_sync()
         global_skill = os.path.join(self.home, ".codex", "skills", "debugger", "SKILL.md")
@@ -445,18 +469,19 @@ Debug the failure.
         doctor = self.run_sync("doctor", check=False)
         self.assertEqual(doctor.returncode, 0)
         self.assertIn("Global native duplicates already represented in .ai/", doctor.stdout)
-        self.assertIn(
-            "./sync-agentic.sh clean --native-duplicates --global", doctor.stdout)
+        self.assertIn("global assets are read-only and take priority", doctor.stdout)
+        self.assertNotIn("clean --native-duplicates --global", doctor.stdout)
 
         self.run_sync("clean", "--native-duplicates")
         self.assertTrue(os.path.exists(global_skill))
 
-        cleaned = self.run_sync("clean", "--native-duplicates", "--global")
-        self.assertIn("Cleaned 2 exact global native duplicate files.", cleaned.stdout)
-        self.assertFalse(os.path.exists(global_skill))
-        self.assertFalse(os.path.exists(global_notes))
+        cleaned = self.run_sync("clean", "--native-duplicates", "--global", check=False)
+        self.assertNotEqual(cleaned.returncode, 0)
+        self.assertIn("refusing to clean global native assets", cleaned.stdout)
+        self.assertTrue(os.path.exists(global_skill))
+        self.assertTrue(os.path.exists(global_notes))
 
-    def test_adopt_accepts_explicit_global_native_path(self):
+    def test_adopt_refuses_explicit_global_native_path(self):
         write(os.path.join(self.home, ".codex", "skills", "global-debug", "SKILL.md"), """---
 name: global-debug
 description: Debugs from global Codex config.
@@ -465,11 +490,14 @@ description: Debugs from global Codex config.
 Debug from the user-level skill.
 """)
 
-        self.run_sync("adopt", "codex", "~/.codex/skills/global-debug/SKILL.md")
-        self.assertTrue(os.path.exists(
+        result = self.run_sync(
+            "adopt", "codex", "~/.codex/skills/global-debug/SKILL.md", check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing to promote global asset", result.stdout)
+        self.assertFalse(os.path.exists(
             self.path(".ai", "skills", "global-debug", "SKILL.md")))
 
-    def test_adopt_all_is_repo_only_unless_global_is_explicit(self):
+    def test_adopt_all_is_repo_only_and_global_flag_is_refused(self):
         write(os.path.join(self.home, ".codex", "skills", "global-debug", "SKILL.md"), """---
 name: global-debug
 description: Debugs from global Codex config.
@@ -482,6 +510,70 @@ Debug from the user-level skill.
         self.assertIn("adopted 0 native assets", result.stdout)
         self.assertFalse(os.path.exists(
             self.path(".ai", "skills", "global-debug", "SKILL.md")))
+
+        global_result = self.run_sync("adopt", "--all", "--global", check=False)
+        self.assertNotEqual(global_result.returncode, 0)
+        self.assertIn("refusing to promote global assets", global_result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "skills", "global-debug", "SKILL.md")))
+
+    def test_doctor_reports_repo_native_skill_shadowed_by_global_without_failing(self):
+        self.run_sync()
+        self.add_global_codex_skill("debugger", body="Debug from global config.")
+        self.add_native_skill(".cursor/skills", "debugger", body="Debug from repo config.")
+
+        result = self.run_sync("doctor", check=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Repo-native assets shadowed by global assets:", result.stdout)
+        self.assertIn(".cursor/skills/debugger/SKILL.md", result.stdout)
+        self.assertIn("~/.codex/skills/debugger/SKILL.md", result.stdout)
+        self.assertIn("global assets take priority", result.stdout)
+        self.assertNotIn("./sync-agentic.sh adopt cursor .cursor/skills/debugger/SKILL.md", result.stdout)
+        self.assertNotIn("./sync-agentic.sh reconcile skill debugger", result.stdout)
+
+    def test_adopt_all_skips_repo_native_skill_shadowed_by_global(self):
+        self.add_global_codex_skill("debugger", body="Debug from global config.")
+        self.add_native_skill(".cursor/skills", "debugger", body="Debug from repo config.")
+
+        result = self.run_sync("adopt", "--all")
+        self.assertIn("skip .cursor/skills/debugger/SKILL.md", result.stdout)
+        self.assertIn("global assets take priority", result.stdout)
+        self.assertIn("adopted 0 native assets", result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "skills", "debugger", "SKILL.md")))
+
+    def test_adopt_refuses_repo_native_skill_shadowed_by_global(self):
+        self.add_global_codex_skill("debugger", body="Debug from global config.")
+        self.add_native_skill(".cursor/skills", "debugger", body="Debug from repo config.")
+
+        result = self.run_sync(
+            "adopt", "cursor", ".cursor/skills/debugger/SKILL.md", check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("global assets take priority", result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "skills", "debugger", "SKILL.md")))
+
+    def test_adopt_all_global_refuses_global_asset_over_repo_duplicate(self):
+        self.add_global_codex_skill("debugger", body="Debug from global config.")
+        self.add_native_skill(".cursor/skills", "debugger", body="Debug from repo config.")
+
+        result = self.run_sync("adopt", "--all", "--global", check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing to promote global assets", result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "skills", "debugger", "SKILL.md")))
+
+    def test_adopt_all_skips_repo_native_skill_with_same_global_body(self):
+        body = "Debug the failure with logs and targeted tests."
+        self.add_global_codex_skill("global-debug", body=body)
+        self.add_native_skill(".cursor/skills", "repo-debug", body=body)
+
+        result = self.run_sync("adopt", "--all")
+        self.assertIn("skip .cursor/skills/repo-debug/SKILL.md", result.stdout)
+        self.assertIn("same normalized body", result.stdout)
+        self.assertIn("adopted 0 native assets", result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".ai", "skills", "repo-debug", "SKILL.md")))
 
     def test_doctor_detects_exact_duplicate_native_skills(self):
         for root in [".cursor/skills", ".agents/skills", ".claude/skills", ".windsurf/skills"]:
@@ -773,6 +865,7 @@ class CliTests(unittest.TestCase):
                 "install-agentic-config.sh",
                 "README.md",
                 "INSTALLER-RUNBOOK.md",
+                "AGENT-ASSISTED-UPDATE-RUNBOOK.md",
                 "CHANGELOG.md",
                 ".gitignore",
             ]:
@@ -986,6 +1079,7 @@ class CliTests(unittest.TestCase):
                 "install-agentic-config.sh",
                 "README.md",
                 "INSTALLER-RUNBOOK.md",
+                "AGENT-ASSISTED-UPDATE-RUNBOOK.md",
                 "VERSION",
                 "CHANGELOG.md",
                 ".gitignore",

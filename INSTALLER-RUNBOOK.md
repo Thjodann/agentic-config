@@ -4,6 +4,24 @@ Use this runbook when a user asks to set up the Agentic Config Kit in another
 repository. It is written for an assisting model or coding agent to execute on the
 user's behalf.
 
+## Model Suitability Notice
+
+Before executing, confirm that the current agent can inspect files, run or request
+shell commands, translate command syntax for the active OS, preserve unrelated
+user changes, reason about Git state, and stop safely on conflicts. If any of
+those capabilities are missing or unreliable, tell the user this workflow should
+be run with a stronger coding/reasoning model or an agent with filesystem and
+shell access, then pause before making changes.
+
+Prefer a stronger model or a more capable agent when:
+
+- the target repo already has `.ai/`, native IDE config, or root `AGENTS.md`;
+- the user requires stealth/no tracked Git changes;
+- shell syntax must be translated across POSIX, PowerShell, or Windows cmd;
+- `doctor`, `check`, tests, or Git status produce unexpected output;
+- conflicts, native-only assets, or duplicate assets appear;
+- the agent cannot verify each command result itself.
+
 ## Goal
 
 Bring a target repository up to the standard Agentic Config Kit setup:
@@ -167,6 +185,10 @@ Then follow the report:
 - Same-name different-content conflict: stop and ask which version should become
   canonical, or merge by editing the `.ai/` asset manually.
 
+- Repo-native asset shadowed by a global asset: leave the repo-native copy
+  unpromoted. Global assets take priority over repo adoption candidates to avoid
+  duplicate callable assets in one repo.
+
 - Cursor-visible generated overlap:
 
   ```bash
@@ -182,6 +204,8 @@ Then follow the report:
 `doctor` also reports supported global IDE assets such as `~/.cursor/commands/*`
 or `~/.codex/skills/*` when they overlap this repo's `.ai/` source. Treat those as
 user-level cleanup warnings, not generated repo output or project blockers.
+If a repo-native asset matches a global asset, `adopt` refuses it and `adopt --all`
+skips it. Global assets stay user-level and are not imported into the repo source.
 
 After adoption or reconciliation:
 
@@ -241,6 +265,8 @@ Expected:
   That is acceptable.
 - `doctor` may report global user-level overlaps from folders such as `~/.codex/`
   or `~/.cursor/`. Those are cleanup decisions for the user, not install blockers.
+- `doctor` may report repo-native assets shadowed by global assets. Those repo
+  assets should not be adopted into `.ai/`; the global asset already wins.
 - `doctor` may report Cursor-visible overlaps when Cursor can see multiple generated
   projections for the same concept. Those are local picker-noise decisions and can
   be handled with `agentic-config demote cursor <generated-path>`.
@@ -265,18 +291,9 @@ agentic-config sync
 agentic-config check
 ```
 
-Only when `doctor` reports exact user-level duplicates and the user explicitly wants
-global cleanup:
-
-```bash
-agentic-config clean --native-duplicates --global
-agentic-config sync
-agentic-config check
-```
-
-Use `agentic-config adopt --all --global` only when the user explicitly wants to
-import supported user-level IDE assets from `~/` into this repo's canonical `.ai/`
-source.
+Do not clean or import global user-level assets from `~/`. `doctor` reports overlaps
+so the user can understand why a repo-native asset was skipped, but global assets
+remain read-only and take priority.
 
 Only when `doctor` reports generated Cursor-visible overlap and the user wants that
 specific generated projection hidden:

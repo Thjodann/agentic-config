@@ -53,8 +53,8 @@ agentic-config doctor
 
 If `doctor` still reports native-only assets, adopt the remaining files or resolve
 any conflicts it reports. Degraded mappings are usually informational.
-Use `adopt --all --global` only when you deliberately want to import supported
-user-level assets from `~/` into this repo's `.ai/` source.
+When a repo-native asset matches a global asset, the global asset takes priority:
+the repo-native copy is skipped instead of being promoted into `.ai/`.
 
 After a source-only clone, regenerate local IDE projections:
 
@@ -66,11 +66,44 @@ Prefer a model-driven setup? Paste the prompt in
 [Ask a model to install ACK](#ask-a-model-to-install-ack), then ask your IDE's
 model to use `/agentic-config`.
 
+Updating an existing ACK setup with an agent? Paste this:
+
+```text
+Please update this repo's Agentic Config Kit setup in a model- and OS-agnostic
+way. Use the runbook's process order exactly, but translate shell syntax for this
+environment when needed.
+
+Runbook:
+https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/AGENT-ASSISTED-UPDATE-RUNBOOK.md
+
+Before making changes, confirm you can inspect files, run or request shell
+commands, reason about Git state, preserve unrelated user changes, and verify each
+command result. If not, recommend a stronger coding/reasoning model or an agent
+with filesystem and shell access, then pause.
+
+Prefer the latest stable GitHub Release. Do not install from a dirty working tree
+unless I explicitly say those changes are in scope. Detect whether this repo uses
+normal `.ai/` or stealth `.agentic-config/.ai/`. Preserve repo-specific assets.
+Update only kit-owned engine/docs/helper assets, then run sync, check, and doctor
+with `agc` or `agentic-config`, whichever is available.
+
+If this is a stealth install, do not edit `.gitignore` or tracked generated files.
+Report expected degraded mappings, global overlaps, Cursor-visible overlaps, and
+stealth skipped tracked outputs as warnings, not failures. Stop on stale output,
+canonical conflicts, repo-native-only assets that need adoption, or IDE-specific
+canonical names. In the final report, list the selected release/ref, changed
+files, verification results, warnings, and whether tracked repo files changed.
+```
+
 ## What's in this kit
 
 ```
 agentic-config-kit/
 ├── README.md
+├── INSTALLER-RUNBOOK.md
+├── AGENT-ASSISTED-UPDATE-RUNBOOK.md
+├── CHANGELOG.md
+├── VERSION
 ├── agentic-config
 ├── install-agentic-config.sh
 ├── install.sh
@@ -431,6 +464,13 @@ issues. If a global asset duplicates or conflicts with this repo's command, skil
 rule, or agent names, `doctor` reports it as a user-level warning without failing
 `doctor` or `bootstrap` on that warning alone.
 
+If a repo-native asset matches a global asset by exact fingerprint, portable
+type/name, or normalized body, `doctor` reports it as shadowed by the global asset.
+`adopt` refuses that repo path, and `adopt --all` skips it, so global user-level
+assets do not get duplicated into the repo's `.ai/` source by accident.
+Explicit global adoption is also refused; global assets stay user-level and take
+priority at runtime.
+
 Cursor may surface generated paths from more than one IDE projection, such as both
 `.cursor/commands/commit.md` and `.agents/skills/command-commit/SKILL.md`.
 `doctor` reports these as Cursor-visible overlaps. Use
@@ -458,13 +498,13 @@ suppresses that Codex-target projection, so `doctor` prints a warning for it.
 - Use `agentic-config clean` to remove generated local IDE projections.
 - Use `agentic-config clean --native-duplicates` only for exact native duplicates
   that are already represented in `.ai/`.
-- Add `--global` to that cleanup command only when you explicitly want to remove
-  exact duplicate files from user-level IDE directories.
+- Treat global user-level assets as higher priority than repo-native adoption
+  candidates; do not promote global assets or shadowed repo copies into `.ai/`.
 - Use `agentic-config demote <ide> <generated-path>` only for generated paths
   reported by `doctor`; markerless native files should be adopted, reconciled, or
   left alone.
-- Use `agentic-config adopt --all --global` only when you explicitly want to import
-  supported user-level IDE assets into the repo's canonical source.
+- Leave supported user-level IDE assets in `~/`; this kit reports overlaps but does
+  not promote or clean global assets.
 - Keep Codex `.codex/rules/*.rules` as Codex-only execution policy; these are not
   portable behavioral rules.
 

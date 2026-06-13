@@ -15,12 +15,11 @@ Usage:
     python3 .ai/sync.py doctor          # diagnose stale/native-only/degraded assets
     python3 .ai/sync.py adopt cursor .cursor/rules/foo.mdc
     python3 .ai/sync.py adopt --all
-    python3 .ai/sync.py adopt --all --global
     python3 .ai/sync.py reconcile --all-exact
     python3 .ai/sync.py reconcile skill debug-word
     python3 .ai/sync.py demote cursor .cursor/commands/debug-word.md
     python3 .ai/sync.py promote cursor .cursor/commands/debug-word.md
-    python3 .ai/sync.py clean --native-duplicates --global
+    python3 .ai/sync.py clean --native-duplicates
     python3 .ai/sync.py bootstrap
 
 Python 3.6+ stdlib only.
@@ -118,6 +117,10 @@ IDE_NAME_PREFIXES = [
 
 
 class SafetyError(Exception):
+    pass
+
+
+class GlobalPriorityError(ValueError):
     pass
 
 
@@ -1560,6 +1563,57 @@ def cursor_visible_overlaps(entries, native_records):
     return overlaps
 
 
+def global_priority_key(asset):
+    return (asset["type"], cursor_visibility_key(asset["name"]))
+
+
+def scan_global_native_records():
+    records = []
+    for ide, kind, rp in scan_native_files(include_global=True, include_repo=False):
+        if kind == "unsupported-policy" or has_marker(rp):
+            continue
+        try:
+            records.append(native_record(ide, kind, rp))
+        except Exception:
+            continue
+    return records
+
+
+def global_priority_blockers_for_asset(asset, global_records=None):
+    global_records = global_records if global_records is not None else scan_global_native_records()
+    fingerprint = asset_fingerprint(asset)
+    key = global_priority_key(asset)
+    body = normalize_body(asset["body"]).strip()
+    blockers = []
+    for record in global_records:
+        global_asset = record["asset"]
+        reason = None
+        if record["fingerprint"] == fingerprint:
+            reason = "exact global duplicate"
+        elif global_priority_key(global_asset) == key:
+            reason = "same %s name" % asset["type"]
+        elif (
+                global_asset["type"] == asset["type"]
+                and len(body) >= 20
+                and normalize_body(global_asset["body"]).strip() == body):
+            reason = "same normalized body"
+        if reason:
+            blockers.append({"record": record, "reason": reason})
+    return blockers
+
+
+def global_priority_message(path, blockers):
+    first = blockers[0]
+    record = first["record"]
+    message = (
+        "%s matches global asset %s (%s); global assets take priority, "
+        "so this repo-native asset will not be promoted into %s/" %
+        (path, record["path"], first["reason"], AI_REL))
+    if len(blockers) > 1:
+        message += " and %d other global match(es)" % (len(blockers) - 1)
+    return message
+
+
 def analyze_native_state(staged_only=False):
     assets = load_assets()
     canonical_by_key, canonical_by_fp, canonical_by_name = canonical_indexes(assets)
@@ -1584,6 +1638,8 @@ def analyze_native_state(staged_only=False):
     represented, canonical_conflicts, global_canonical_conflicts = [], [], []
     without_canonical = {}
     global_native_only = []
+    global_records = [record for record in records if record["scope"] == "global"]
+    global_shadowed = []
     for record in records:
         asset = record["asset"]
         key = asset_key(asset)
@@ -1608,6 +1664,14 @@ def analyze_native_state(staged_only=False):
             else:
                 canonical_conflicts.append(message)
         else:
+            if record["scope"] == "repo":
+                blockers = global_priority_blockers_for_asset(asset, global_records)
+                if blockers:
+                    global_shadowed.append({
+                        "record": record,
+                        "blockers": blockers,
+                    })
+                    continue
             without_canonical.setdefault(key, []).append(record)
 
     exact_groups, native_only, duplicate_conflicts = [], [], []
@@ -1636,7 +1700,10 @@ def analyze_native_state(staged_only=False):
 
     possible = []
     by_body = {}
+    global_shadowed_paths = set(item["record"]["path"] for item in global_shadowed)
     for record in records:
+        if record["path"] in global_shadowed_paths:
+            continue
         asset = record["asset"]
         body_key = (asset["type"], normalize_body(asset["body"]))
         by_body.setdefault(body_key, []).append(record)
@@ -1656,6 +1723,7 @@ def analyze_native_state(staged_only=False):
         "records": records,
         "represented": represented,
         "global_native_only": global_native_only,
+        "global_shadowed": global_shadowed,
         "canonical_conflicts": canonical_conflicts,
         "global_canonical_conflicts": global_canonical_conflicts,
         "duplicate_conflicts": duplicate_conflicts,
@@ -1679,18 +1747,30 @@ def write_canonical_asset(asset):
     return dest_rel
 
 
-def adopt_asset(ide, path):
+def adopt_asset(ide, path, global_priority="error"):
     rel = native_display_path(path)
     kind = detect_native(ide, rel)
     if not kind:
         raise ValueError("%s is not a supported %s-native asset" % (rel, ide))
+    if native_scope(rel) == "global":
+        raise GlobalPriorityError(
+            "refusing to promote global asset %s into %s/; "
+            "global assets stay user-level and take priority" % (rel, AI_REL))
     if has_marker(rel):
         print("skip %s: already generated from %s/" % (rel, AI_REL))
-        return 0
+        return False
     asset = native_to_asset(ide, rel, kind)
+    if native_scope(rel) == "repo":
+        blockers = global_priority_blockers_for_asset(asset)
+        if blockers:
+            message = global_priority_message(rel, blockers)
+            if global_priority == "skip":
+                print("skip %s: %s" % (rel, message))
+                return False
+            raise GlobalPriorityError(message)
     dest_rel = write_canonical_asset(asset)
     print("adopted %s -> %s" % (rel, dest_rel))
-    return 0
+    return True
 
 
 def scan_native_files(include_global=True, include_repo=True):
@@ -1724,18 +1804,23 @@ def scan_native_files(include_global=True, include_repo=True):
 
 def command_adopt(args):
     try:
+        if args.global_scope:
+            raise GlobalPriorityError(
+                "refusing to promote global assets into %s/; "
+                "global assets stay user-level and take priority" % AI_REL)
         if args.all:
             adopted = 0
-            for ide, kind, rp in scan_native_files(include_global=args.global_scope):
+            for ide, kind, rp in scan_native_files(include_global=False):
                 if kind == "unsupported-policy" or has_marker(rp):
                     continue
-                adopt_asset(ide, rp)
-                adopted += 1
+                if adopt_asset(ide, rp, global_priority="skip"):
+                    adopted += 1
             print("adopted %d native assets" % adopted)
             return 0
         if not args.ide or not args.path:
             raise ValueError("usage: adopt <ide> <path> or adopt --all")
-        return adopt_asset(args.ide, args.path)
+        adopt_asset(args.ide, args.path)
+        return 0
     except ValueError as e:
         print("ERROR: %s" % e)
         return 1
@@ -1774,7 +1859,7 @@ def command_doctor(args):
     if not any([
             has_blocking, global_conflicts, state["represented"],
             state["possible"], state["cursor_visible_overlaps"],
-            state["degradations"]]):
+            state["global_shadowed"], state["degradations"]]):
         print("Doctor found no agentic config issues.")
         return 0
 
@@ -1805,8 +1890,7 @@ def command_doctor(args):
             asset = record["asset"]
             print("  %s -> %s %s %s" %
                   (record["path"], AI_REL, asset["type"], asset["name"]))
-        print("  optional cleanup: %s" %
-              shell_command([COMMAND_NAME, "clean", "--native-duplicates", "--global"]))
+        print("  global assets are read-only and take priority; leave them in place.")
     if state["native_only"]:
         print("Native-only assets:")
         for record in state["native_only"]:
@@ -1826,6 +1910,12 @@ def command_doctor(args):
         print("Global native overlaps:")
         for item in global_conflicts:
             print("  %s" % item)
+    if state["global_shadowed"]:
+        print("Repo-native assets shadowed by global assets:")
+        for item in state["global_shadowed"]:
+            record = item["record"]
+            print("  %s: %s" %
+                  (record["path"], global_priority_message(record["path"], item["blockers"])))
     if state["cursor_visible_overlaps"]:
         print("Cursor-visible overlaps:")
         for overlap in state["cursor_visible_overlaps"]:
@@ -2040,6 +2130,11 @@ def remove_native_record(record):
 
 
 def command_clean(args):
+    if args.global_scope:
+        print(
+            "ERROR: refusing to clean global native assets; "
+            "global assets stay user-level and take priority")
+        return 1
     removed = []
     try:
         for entry in read_manifest_entries():
@@ -2057,13 +2152,12 @@ def command_clean(args):
         return 1
     prune_empty_dirs(removed)
 
-    native_removed, global_native_removed = [], []
+    native_removed = []
     if args.native_duplicates:
         state = analyze_native_state(staged_only=False)
         for record in state["represented"]:
             if record["scope"] == "global":
-                if args.global_scope:
-                    global_native_removed.extend(remove_native_record(record))
+                continue
             else:
                 native_removed.extend(remove_native_record(record))
 
@@ -2074,11 +2168,6 @@ def command_clean(args):
         print("Cleaned %d exact native duplicate files." % len(native_removed))
         for p in native_removed:
             print("  removed %s" % p)
-        if args.global_scope:
-            print("Cleaned %d exact global native duplicate files." %
-                  len(global_native_removed))
-            for p in global_native_removed:
-                print("  removed %s" % p)
     return 0
 
 

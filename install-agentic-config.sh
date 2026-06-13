@@ -70,7 +70,7 @@ cp -R "$source_dir/.ai" "$INSTALL_DIR/.ai"
 [ -d "$source_dir/hooks" ] && cp -R "$source_dir/hooks" "$INSTALL_DIR/hooks"
 [ -d "$source_dir/assets" ] && cp -R "$source_dir/assets" "$INSTALL_DIR/assets"
 
-for file in agentic-config sync-agentic.sh install.sh install-agentic-config.sh README.md INSTALLER-RUNBOOK.md VERSION CHANGELOG.md .gitignore; do
+for file in agentic-config sync-agentic.sh install.sh install-agentic-config.sh README.md INSTALLER-RUNBOOK.md AGENT-ASSISTED-UPDATE-RUNBOOK.md VERSION CHANGELOG.md .gitignore; do
     if [ -f "$source_dir/$file" ]; then
         cp "$source_dir/$file" "$INSTALL_DIR/$file"
     fi

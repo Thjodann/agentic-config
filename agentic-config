@@ -647,12 +647,12 @@ Usage:
   {cmd} doctor [--staged]
   {cmd} bootstrap
   {cmd} adopt <ide> <path>
-  {cmd} adopt --all [--global]
+  {cmd} adopt --all
   {cmd} reconcile <kind> <name>
   {cmd} reconcile --all-exact
   {cmd} demote <consumer-ide> <generated-path>
   {cmd} promote <consumer-ide> <generated-path>
-  {cmd} clean [--native-duplicates] [--global]
+  {cmd} clean [--native-duplicates]
   {cmd} update [--check] [--force] [--version <tag>]
   {cmd} version
 
