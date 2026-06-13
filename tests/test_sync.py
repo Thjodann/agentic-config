@@ -107,7 +107,7 @@ class VersionUpdateTests(unittest.TestCase):
         self.assertIn("stronger coding/reasoning model", agent_runbook)
         self.assertIn("source recorded by the installed CLI", agent_runbook)
         self.assertIn("private mirror, do not use the public curl command", agent_runbook)
-        self.assertIn("YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL", readme)
+        self.assertNotIn("YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL", readme)
         self.assertIn("Never run angle-bracket placeholders literally", agent_runbook)
         self.assertIn("AGENTIC-CONFIG-RUNBOOK.md", install_runbook)
         self.assertIn("AGENTIC-CONFIG-RUNBOOK.md", update_runbook)

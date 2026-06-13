@@ -50,27 +50,9 @@ Requirement: `python3` 3.6 or newer.
 
 **1. Install Agentic Config**
 
-Choose the source you can access.
-
-Public GitHub:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
-
-Private mirror:
-
-```bash
-# Replace YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL with your private mirror's clone URL.
-git clone YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL agentic-config
-cd agentic-config
-./install-agentic-config.sh
-```
-
-Private raw download URLs can require temporary authentication tokens, so the
-clone-and-install path is usually more reliable for private mirrors.
-The installer records the source it used, and future `agentic update` commands
-follow that source unless you override it with environment variables.
 
 **2. Confirm the command works**
 
@@ -146,12 +128,6 @@ Please install Agentic Config in this repo.
 
 Use this command if Agentic Config is not installed yet:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
-
-If this repo should use a private mirror instead, replace the placeholder below
-with the private Agentic Config clone URL:
-git clone YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL agentic-config
-cd agentic-config
-./install-agentic-config.sh
 
 Then run:
 agentic init .
@@ -311,9 +287,8 @@ For later maintenance:
 | Task | Command |
 | --- | --- |
 | Check the installed version | `agentic --version` |
-| Check for an update from the installed source | `agentic update --check` |
-| Update from the installed source | `agentic update` |
-| Force a specific checkout source | Pull a clean checkout, then run `./install-agentic-config.sh`. |
+| Check for an update | `agentic update --check` |
+| Update the CLI and bundled templates | `agentic update` |
 | Preview uninstall | `agentic uninstall --dry-run` |
 | Uninstall | `agentic uninstall` |
 
@@ -323,15 +298,6 @@ Public GitHub:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/uninstall-agentic-config.sh | sh
-```
-
-Private mirror:
-
-```bash
-# Replace YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL with your private mirror's clone URL.
-git clone YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL agentic-config
-cd agentic-config
-sh uninstall-agentic-config.sh
 ```
 
 Uninstall removes the Agentic Config-managed CLI files from your user account. It does not
@@ -375,7 +341,7 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
 | `agentic check` reports stale output | Run `agentic sync`, then run `agentic check` again. |
 | `agentic doctor` reports native-only files | Adopt them with `agentic adopt <ide> <path>`, use `agentic adopt --all`, or leave them native. |
 | Stealth mode skips a path | That path is already tracked by Git. Use normal mode, adopt the existing file, or resolve it manually. |
-| `curl` is blocked | Install from a local or private checkout with `./install-agentic-config.sh`, or ask an assistant to follow [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md). |
+| `curl` is blocked | Install from a local checkout with `./install-agentic-config.sh`, or ask an assistant to follow [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md). |
 
 ## 📚 More Detail
 
