@@ -1020,7 +1020,7 @@ def existing_matches_manifest_hash(rel, entry):
     return sha256_bytes(read_bytes(ap)) == entry.get("hash")
 
 
-def assert_safe_file_mutation(rel, old_entry, action):
+def assert_safe_file_mutation(rel, old_entry, action, represented=None):
     ap = abspath(rel)
     if not os.path.exists(ap):
         return
@@ -1030,25 +1030,31 @@ def assert_safe_file_mutation(rel, old_entry, action):
             (action, rel))
     if has_marker(rel) or existing_matches_manifest_hash(rel, old_entry):
         return
+    # A markerless native whose content is already captured verbatim in `.ai/`
+    # (an adopted source surface) is safe to refresh in place: the projection we
+    # write is the canonical truth, so nothing is lost. Divergent or unrelated
+    # markerless files are never in `represented`, so they stay protected.
+    if represented and rel in represented:
+        return
     raise SafetyError(
         "refusing to %s markerless file at generated path %s. "
         "Run %s doctor and adopt/reconcile it first, or remove it manually." %
         (action, rel, COMMAND_NAME))
 
 
-def preflight_file_mutations(texts, copies, old_entries, new_file_paths):
+def preflight_file_mutations(texts, copies, old_entries, new_file_paths, represented=None):
     old_files = manifest_files_by_path(old_entries)
     tracked = git_tracked_paths() if STEALTH_MODE else set()
     for p, content in sorted(texts.items()):
         ap = abspath(p)
         if os.path.isfile(ap) and read_text(ap) == content:
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
     for p, src in sorted(copies.items()):
         ap = abspath(p)
         if os.path.isfile(ap) and read_bytes(ap) == read_bytes(src):
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
     for entry in old_entries:
         if entry.get("mode", "file") != "file":
             continue
@@ -1058,7 +1064,7 @@ def preflight_file_mutations(texts, copies, old_entries, new_file_paths):
                 add_stealth_skip(
                     "%s is tracked; stealth mode skipped pruning stale generated output." % p)
                 continue
-            assert_safe_file_mutation(p, entry, "prune")
+            assert_safe_file_mutation(p, entry, "prune", represented)
     return old_files
 
 
@@ -1110,19 +1116,20 @@ def compare_outputs(texts, copies, managed, entries):
     return drift
 
 
-def write_outputs(texts, copies, managed, entries):
+def write_outputs(texts, copies, managed, entries, represented=None):
     old_entries = read_manifest_entries()
     tracked = git_tracked_paths() if STEALTH_MODE else set()
     new_file_paths = set(list(texts.keys()) + list(copies.keys()))
     new_managed = set((p, b) for p, blocks in managed.items() for b in blocks)
-    old_files = preflight_file_mutations(texts, copies, old_entries, new_file_paths)
+    old_files = preflight_file_mutations(
+        texts, copies, old_entries, new_file_paths, represented)
     created = updated = 0
 
     for p, content in sorted(texts.items()):
         ap = abspath(p)
         if os.path.isfile(ap) and read_text(ap) == content:
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
         existed = os.path.exists(ap)
         write_text(ap, content)
         created += 0 if existed else 1
@@ -1133,7 +1140,7 @@ def write_outputs(texts, copies, managed, entries):
         data = read_bytes(src)
         if os.path.isfile(ap) and read_bytes(ap) == data:
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
         existed = os.path.exists(ap)
         write_bytes(ap, data)
         created += 0 if existed else 1
@@ -1171,7 +1178,7 @@ def write_outputs(texts, copies, managed, entries):
                 add_stealth_skip(
                     "%s is tracked; stealth mode skipped pruning stale generated output." % p)
                 continue
-            assert_safe_file_mutation(p, entry, "prune")
+            assert_safe_file_mutation(p, entry, "prune", represented)
             os.remove(abspath(p))
             pruned.append(p)
     prune_empty_dirs([p.split(" (", 1)[0] for p in pruned])
@@ -1207,8 +1214,10 @@ def command_sync(check=False):
         print_stealth_skips()
         return 0
 
+    represented = represented_native_paths(assets)
     try:
-        created, updated, managed_updated, pruned = write_outputs(texts, copies, managed, entries)
+        created, updated, managed_updated, pruned = write_outputs(
+            texts, copies, managed, entries, represented)
     except SafetyError as e:
         print("ERROR: %s" % e)
         return 1
@@ -1768,6 +1777,10 @@ def adopt_asset(ide, path, global_priority="error"):
                 print("skip %s: %s" % (rel, message))
                 return False
             raise GlobalPriorityError(message)
+    _by_key, by_fp, _by_name = canonical_indexes(load_assets())
+    if asset_fingerprint(asset) in by_fp:
+        print("skip %s: already represented in %s/" % (rel, AI_REL))
+        return False
     dest_rel = write_canonical_asset(asset)
     print("adopted %s -> %s" % (rel, dest_rel))
     return True
@@ -1802,6 +1815,29 @@ def scan_native_files(include_global=True, include_repo=True):
     return sorted(found, key=lambda x: x[2])
 
 
+def represented_native_paths(assets):
+    """Repo-native markerless files whose content is already captured verbatim
+    in canonical `.ai/` (exact fingerprint match).
+
+    These are the surfaces an earlier `adopt`/`reconcile` promoted; sync may
+    refresh them in place because the same asset already lives in `.ai/`.
+    Divergent or unrelated markerless files never match, so they remain
+    protected by the markerless-overwrite guard.
+    """
+    _by_key, by_fp, _by_name = canonical_indexes(assets)
+    paths = set()
+    for ide, kind, rp in scan_native_files(include_global=False):
+        if kind == "unsupported-policy" or has_marker(rp):
+            continue
+        try:
+            record = native_record(ide, kind, rp)
+        except Exception:
+            continue
+        if record["fingerprint"] in by_fp:
+            paths.add(record["path"])
+    return paths
+
+
 def command_adopt(args):
     try:
         if args.global_scope:
@@ -1810,12 +1846,24 @@ def command_adopt(args):
                 "global assets stay user-level and take priority" % AI_REL)
         if args.all:
             adopted = 0
+            unresolved = []
             for ide, kind, rp in scan_native_files(include_global=False):
                 if kind == "unsupported-policy" or has_marker(rp):
                     continue
-                if adopt_asset(ide, rp, global_priority="skip"):
-                    adopted += 1
+                try:
+                    if adopt_asset(ide, rp, global_priority="skip"):
+                        adopted += 1
+                except ValueError as e:
+                    # One asset that conflicts with existing `.ai/` content (or
+                    # fails to parse) must not abort adoption of everything else.
+                    unresolved.append(rp)
+                    print("skip %s: %s" % (rp, e))
             print("adopted %d native assets" % adopted)
+            if unresolved:
+                print(
+                    "%d native asset(s) still need manual resolution; "
+                    "review them with: %s" %
+                    (len(unresolved), shell_command([COMMAND_NAME, "doctor"])))
             return 0
         if not args.ide or not args.path:
             raise ValueError("usage: adopt <ide> <path> or adopt --all")
