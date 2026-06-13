@@ -415,3 +415,36 @@ agc update --version v0.1.0
 
 Self-update refreshes the global CLI and bundled templates. It does not overwrite
 a target repo's initialized `.ai/` or `.agentic-config/.ai/` source.
+
+## Uninstalling Or Clean Reinstalling ACK
+
+Preview what the user-level install would remove:
+
+```bash
+agc uninstall --dry-run
+```
+
+Uninstall the ACK-managed CLI entries and bundled kit:
+
+```bash
+agc uninstall
+```
+
+If `agc` is unavailable, run the standalone uninstaller:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
+```
+
+This removes only ACK-managed entries under
+`${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}` and the kit directory under
+`${AGENTIC_CONFIG_HOME:-$HOME/.local/share/agentic-config-kit}`. It leaves repo
+`.ai/`, stealth `.agentic-config/.ai/`, generated IDE projections, and global IDE
+assets alone.
+
+For a clean reinstall:
+
+```bash
+agc uninstall
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+```

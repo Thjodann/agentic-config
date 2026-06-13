@@ -106,6 +106,7 @@ agentic-config-kit/
 ├── VERSION
 ├── agentic-config
 ├── install-agentic-config.sh
+├── uninstall-agentic-config.sh
 ├── install.sh
 ├── sync-agentic.sh
 ├── assets/agentic-config-kit-banner.png
@@ -171,6 +172,44 @@ agc
 `agentic-config` is the explicit command. `agc` is the short alias used in quick
 start examples. If a non-ACK `agc` command already exists, the installer leaves it
 alone and prints a warning.
+
+## Uninstall the CLI
+
+Preview what the user-level install would remove:
+
+```bash
+agc uninstall --dry-run
+```
+
+Then uninstall:
+
+```bash
+agc uninstall
+```
+
+If the installed command is broken or not on `PATH`, run the standalone
+uninstaller:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
+```
+
+Uninstall removes only the ACK-managed CLI entries and kit directory under:
+
+```text
+${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}
+${AGENTIC_CONFIG_HOME:-$HOME/.local/share/agentic-config-kit}
+```
+
+It does not remove repo `.ai/`, stealth `.agentic-config/.ai/`, generated IDE
+projections, or global IDE assets such as `~/.codex/skills`.
+
+For a clean reinstall:
+
+```bash
+agc uninstall
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+```
 
 ## Versioning and updates
 

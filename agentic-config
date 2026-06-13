@@ -28,6 +28,7 @@ GITHUB_API_BASE = "https://api.github.com/repos/%s" % REPO_SLUG
 DEFAULT_RELEASE_API_URL = "%s/releases/latest" % GITHUB_API_BASE
 DEFAULT_RELEASE_ARCHIVE_BASE = "%s/archive/refs/tags" % GITHUB_BASE
 DEFAULT_VERSION = "0.1.0"
+INSTALL_MARKER = ".agentic-config-kit-install"
 UPDATE_CACHE_TTL_SECONDS = 24 * 60 * 60
 SEMVER_RE = re.compile(
     r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$")
@@ -582,6 +583,118 @@ def install_update(archive_url):
     return subprocess.call(["sh", installer], env=env)
 
 
+def platform_default_install_dir():
+    return os.path.abspath(os.path.expanduser("~/.local/share/agentic-config-kit"))
+
+
+def default_install_dir():
+    return os.path.abspath(os.path.expanduser(os.environ.get(
+        "AGENTIC_CONFIG_HOME", platform_default_install_dir())))
+
+
+def default_bin_dir():
+    return os.path.abspath(os.path.expanduser(os.environ.get(
+        "AGENTIC_CONFIG_BIN", "~/.local/bin")))
+
+
+def readlink_abs(path):
+    target = os.readlink(path)
+    if not os.path.isabs(target):
+        target = os.path.join(os.path.dirname(path), target)
+    return os.path.abspath(target)
+
+
+def files_equal(left, right):
+    try:
+        with open(left, "rb") as f:
+            left_data = f.read()
+        with open(right, "rb") as f:
+            right_data = f.read()
+        return left_data == right_data
+    except OSError:
+        return False
+
+
+def managed_cli_entry(path, install_dir):
+    target = os.path.join(install_dir, "agentic-config")
+    if not os.path.exists(path) and not os.path.islink(path):
+        return False
+    if os.path.islink(path):
+        return readlink_abs(path) == os.path.abspath(target)
+    if os.path.isfile(path) and os.path.isfile(target):
+        return files_equal(path, target)
+    return False
+
+
+def install_dir_looks_managed(path):
+    if not os.path.isdir(path) or os.path.islink(path):
+        return False
+    marker = os.path.join(path, INSTALL_MARKER)
+    legacy_default = os.path.abspath(path) == platform_default_install_dir()
+    if not os.path.isfile(marker) and not legacy_default:
+        return False
+    required = [
+        os.path.join(path, "agentic-config"),
+        os.path.join(path, ".ai", "sync.py"),
+    ]
+    return all(os.path.isfile(p) for p in required)
+
+
+def uninstall_action(path, dry_run, description, directory=False):
+    prefix = "Would remove" if dry_run else "Removed"
+    print("%s %s: %s" % (prefix, description, path))
+    if dry_run:
+        return
+    if directory:
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
+
+
+def command_uninstall(argv, command):
+    parser = argparse.ArgumentParser(
+        prog="%s uninstall" % command,
+        description="Remove the user-level Agentic Config Kit CLI install.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print what would be removed without deleting anything.")
+    args = parser.parse_args(argv)
+
+    install_dir = default_install_dir()
+    bin_dir = default_bin_dir()
+    had_error = False
+
+    print("Agentic Config Kit uninstall")
+    print("  kit: %s" % install_dir)
+    print("  bin: %s" % bin_dir)
+
+    for name in ["agentic-config", "agc"]:
+        path = os.path.join(bin_dir, name)
+        if not os.path.exists(path) and not os.path.islink(path):
+            print("Skipped missing command: %s" % path)
+            continue
+        if managed_cli_entry(path, install_dir):
+            uninstall_action(path, args.dry_run, "command")
+        else:
+            print("Skipped non-ACK command: %s" % path)
+
+    if os.path.exists(install_dir):
+        if install_dir_looks_managed(install_dir):
+            uninstall_action(install_dir, args.dry_run, "kit directory", directory=True)
+        else:
+            eprint("ERROR: refusing to remove install dir that does not look ACK-managed: %s" %
+                   install_dir)
+            had_error = True
+    else:
+        print("Skipped missing kit directory: %s" % install_dir)
+
+    if args.dry_run:
+        print("Dry run complete; no files were removed.")
+    elif not had_error:
+        print("Uninstall complete.")
+        print("Open a new shell or run `hash -r` / `rehash` if your shell cached the command.")
+    return 1 if had_error else 0
+
+
 def command_update(argv, command):
     parser = argparse.ArgumentParser(
         prog="%s update" % command,
@@ -654,6 +767,7 @@ Usage:
   {cmd} promote <consumer-ide> <generated-path>
   {cmd} clean [--native-duplicates]
   {cmd} update [--check] [--force] [--version <tag>]
+  {cmd} uninstall [--dry-run]
   {cmd} version
 
 Normal init creates repo-local `.ai/` source and source-only ignore rules.
@@ -676,6 +790,8 @@ def main(argv=None):
         rc = command_init(argv[1:])
     elif cmd == "update":
         return command_update(argv[1:], cmd_name)
+    elif cmd == "uninstall":
+        return command_uninstall(argv[1:], cmd_name)
     elif cmd in PROXY_COMMANDS:
         rc = proxy(cmd, argv[1:])
     else:

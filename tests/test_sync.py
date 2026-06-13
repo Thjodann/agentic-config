@@ -16,6 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SYNC_SRC = os.path.join(ROOT, ".ai", "sync.py")
 CLI_SRC = os.path.join(ROOT, "agentic-config")
 CLI_INSTALLER_SRC = os.path.join(ROOT, "install-agentic-config.sh")
+CLI_UNINSTALLER_SRC = os.path.join(ROOT, "uninstall-agentic-config.sh")
 HOOK_SRC = os.path.join(ROOT, "hooks", "pre-commit")
 GITIGNORE_SRC = os.path.join(ROOT, ".gitignore")
 MAINTAINER_SKILL_SRC = os.path.join(
@@ -94,8 +95,11 @@ class VersionUpdateTests(unittest.TestCase):
         self.assertIn("stronger coding/reasoning model", readme)
         self.assertIn("latest stable GitHub Release", update_runbook)
         self.assertIn("Never run angle-bracket placeholders literally", update_runbook)
-        self.assertIn("sh -n install-agentic-config.sh\nsh -n sync-agentic.sh\nsh -n install.sh",
+        self.assertIn("sh -n install-agentic-config.sh\nsh -n uninstall-agentic-config.sh\nsh -n sync-agentic.sh\nsh -n install.sh",
                       update_runbook)
+        self.assertIn("agc uninstall --dry-run", readme)
+        self.assertIn("uninstall-agentic-config.sh | sh", readme)
+        self.assertIn("sh -n uninstall-agentic-config.sh", update_runbook)
         self.assertNotIn("remote default branch HEAD", update_runbook)
 
 
@@ -863,6 +867,7 @@ class CliTests(unittest.TestCase):
                 "sync-agentic.sh",
                 "install.sh",
                 "install-agentic-config.sh",
+                "uninstall-agentic-config.sh",
                 "README.md",
                 "INSTALLER-RUNBOOK.md",
                 "AGENT-ASSISTED-UPDATE-RUNBOOK.md",
@@ -1022,6 +1027,10 @@ class CliTests(unittest.TestCase):
         installed_agc = os.path.join(install_bin, "agc")
         self.assertTrue(os.path.exists(installed_cli))
         self.assertTrue(os.path.exists(installed_agc))
+        self.assertTrue(os.path.exists(os.path.join(
+            install_home, "uninstall-agentic-config.sh")))
+        self.assertTrue(os.path.exists(os.path.join(
+            install_home, ".agentic-config-kit-install")))
         installed_env = dict(self.env)
         installed_env.pop("AGENTIC_CONFIG_KIT_DIR", None)
         help_result = subprocess.run(
@@ -1042,6 +1051,124 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, agc_result.returncode, agc_result.stdout)
         self.assertEqual("agc 0.1.0", agc_result.stdout.strip())
+
+    def test_cli_uninstall_dry_run_keeps_install(self):
+        install_home = self.path("home", "share", "agentic-config-kit")
+        install_bin = self.path("home", "bin")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        subprocess.check_call(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT)
+        installed_cli = os.path.join(install_bin, "agentic-config")
+
+        result = subprocess.run(
+            [installed_cli, "uninstall", "--dry-run"],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertIn("Would remove command", result.stdout)
+        self.assertIn("Would remove kit directory", result.stdout)
+        self.assertTrue(os.path.exists(installed_cli))
+        self.assertTrue(os.path.exists(install_home))
+
+    def test_cli_uninstall_removes_managed_install_and_preserves_foreign_agc(self):
+        install_home = self.path("home", "share", "agentic-config-kit")
+        install_bin = self.path("home", "bin")
+        os.makedirs(install_bin)
+        foreign_agc = os.path.join(install_bin, "agc")
+        write(foreign_agc, "#!/bin/sh\necho foreign\n")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        subprocess.check_call(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT)
+        installed_cli = os.path.join(install_bin, "agentic-config")
+
+        result = subprocess.run(
+            [installed_cli, "uninstall"],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertIn("Uninstall complete", result.stdout)
+        self.assertFalse(os.path.exists(installed_cli))
+        self.assertFalse(os.path.exists(install_home))
+        self.assertTrue(os.path.exists(foreign_agc))
+        self.assertEqual("#!/bin/sh\necho foreign\n", read(foreign_agc))
+
+    def test_standalone_uninstaller_removes_managed_install(self):
+        install_home = self.path("home", "share", "agentic-config-kit")
+        install_bin = self.path("home", "bin")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        subprocess.check_call(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT)
+
+        result = subprocess.run(
+            ["sh", CLI_UNINSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertIn("Uninstall complete", result.stdout)
+        self.assertFalse(os.path.exists(os.path.join(install_bin, "agentic-config")))
+        self.assertFalse(os.path.exists(os.path.join(install_bin, "agc")))
+        self.assertFalse(os.path.exists(install_home))
+
+    def test_uninstall_refuses_unmarked_custom_install_dir(self):
+        install_home = self.path("custom", "agentic-config-kit")
+        install_bin = self.path("custom", "bin")
+        write(os.path.join(install_home, "agentic-config"), "not installed\n")
+        write(os.path.join(install_home, ".ai", "sync.py"), "# sync\n")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+
+        cli_result = subprocess.run(
+            [sys.executable, CLI_SRC, "uninstall"],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertNotEqual(0, cli_result.returncode, cli_result.stdout)
+        self.assertIn("refusing to remove install dir", cli_result.stdout)
+        self.assertTrue(os.path.exists(os.path.join(install_home, "agentic-config")))
+
+        shell_result = subprocess.run(
+            ["sh", CLI_UNINSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertNotEqual(0, shell_result.returncode, shell_result.stdout)
+        self.assertIn("refusing to remove install dir", shell_result.stdout)
+        self.assertTrue(os.path.exists(os.path.join(install_home, ".ai", "sync.py")))
 
     def test_installer_does_not_overwrite_foreign_agc(self):
         install_home = self.path("home", "share", "agentic-config-kit")
@@ -1077,6 +1204,7 @@ class CliTests(unittest.TestCase):
                 "sync-agentic.sh",
                 "install.sh",
                 "install-agentic-config.sh",
+                "uninstall-agentic-config.sh",
                 "README.md",
                 "INSTALLER-RUNBOOK.md",
                 "AGENT-ASSISTED-UPDATE-RUNBOOK.md",

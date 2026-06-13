@@ -220,6 +220,7 @@ argument.
 ```bash
 python3 -m py_compile .ai/sync.py agentic-config
 sh -n install-agentic-config.sh
+sh -n uninstall-agentic-config.sh
 sh -n sync-agentic.sh
 sh -n install.sh
 python3 -m unittest discover -s tests
@@ -271,6 +272,22 @@ agc --version
 agentic-config --help
 agc --help
 ```
+
+If the user requests a clean reinstall, preview the uninstall first:
+
+```bash
+agc uninstall --dry-run
+```
+
+Then run `agc uninstall` before the install step, or use the standalone
+uninstaller when the installed command is unavailable:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
+```
+
+Uninstall removes only the user-level ACK CLI install and bundled kit directory;
+it does not clean initialized repo config or global IDE assets.
 
 If a custom `AGENTIC_CONFIG_HOME` was used, verify that directory. Otherwise the
 default install home is `$HOME/.local/share/agentic-config-kit` on POSIX-like
