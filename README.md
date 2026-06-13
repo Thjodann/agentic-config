@@ -1,3 +1,5 @@
+![Agentic Config overview banner](assets/agentic-config-banner.png)
+
 # Agentic Config
 
 **Write AI assistant setup once. Use it across Claude Code, Cursor,
