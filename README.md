@@ -35,6 +35,12 @@ curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/in
 This installs both `agentic-config` and the short `agc` alias. From the repo you
 want to set up, choose one mode:
 
+Want a disposable repo to test against first?
+
+```bash
+git clone https://github.com/Thjodann/agentic-config-kit-test.git
+```
+
 | Goal | Command | Canonical source |
 | --- | --- | --- |
 | Team-shared config committed to the repo | `agc init .` | `.ai/` |
