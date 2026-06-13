@@ -69,6 +69,8 @@ cd agentic-config
 
 Private raw download URLs can require temporary authentication tokens, so the
 clone-and-install path is usually more reliable for private mirrors.
+The installer records the source it used, and future `agentic update` commands
+follow that source unless you override it with environment variables.
 
 **2. Confirm the command works**
 
@@ -309,9 +311,9 @@ For later maintenance:
 | Task | Command |
 | --- | --- |
 | Check the installed version | `agentic --version` |
-| Check for a public GitHub update | `agentic update --check` |
-| Update from public GitHub | `agentic update` |
-| Update from a private mirror | Pull a clean private checkout, then run `./install-agentic-config.sh`. |
+| Check for an update from the installed source | `agentic update --check` |
+| Update from the installed source | `agentic update` |
+| Force a specific checkout source | Pull a clean checkout, then run `./install-agentic-config.sh`. |
 | Preview uninstall | `agentic uninstall --dry-run` |
 | Uninstall | `agentic uninstall` |
 
