@@ -2,7 +2,7 @@
 
 All notable changes to Agentic Config are tracked here.
 
-## v0.1.0
+## v0.1.0 - 2026-06-13
 
 - Establish GitHub Releases as the distribution source.
 - Add SemVer-based CLI version reporting and update checks.
