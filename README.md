@@ -33,6 +33,15 @@ Tool-specific files for Cursor, Claude Code, Codex, Windsurf/Devin, and Continue
 Use Agentic Config when you want everyone on a project to get the same AI guidance, even if
 they use different AI coding tools.
 
+**Start here:**
+
+| Goal | Best next step |
+| --- | --- |
+| I want to set up a real team repo | Follow [Set Up In 3 Minutes](#-set-up-in-3-minutes). |
+| I want to try it without risk | Use the [safe test repo](#-try-agentic-config-safely). |
+| I want my AI assistant to do it | Copy the prompt in [Let An AI Assistant Set It Up](#-let-an-ai-assistant-set-it-up). |
+| I already have AI tool files | Start with [Import Existing AI Tool Files](#-import-existing-ai-tool-files). |
+
 ## 🚀 Set Up In 3 Minutes
 
 Requirement: `python3` 3.6 or newer.
@@ -43,19 +52,25 @@ Requirement: `python3` 3.6 or newer.
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
 
-**2. Open the repo you want to set up**
+**2. Confirm the command works**
+
+```bash
+agentic --version
+```
+
+**3. Open the repo you want to set up**
 
 ```bash
 cd /path/to/your/repo
 ```
 
-**3. Initialize Agentic Config**
+**4. Initialize Agentic Config**
 
 ```bash
 agentic init .
 ```
 
-**4. Check the result**
+**5. Check the result**
 
 ```bash
 agentic doctor
@@ -65,6 +80,7 @@ agentic check
 > [!TIP]
 > You are done when `agentic check` says the generated files are in sync, and
 > `agentic doctor` does not report conflicts that need manual cleanup.
+> If you only needed a standard setup, you can stop here.
 
 ## 🧭 Which Setup Should I Use?
 
@@ -84,6 +100,8 @@ testing, working privately, or bringing existing AI tool files into Agentic Conf
 
 Use [agentic-config-kit-test](https://github.com/Thjodann/agentic-config-kit-test)
 when you want a clonable sandbox instead of testing Agentic Config in a real project.
+The sandbox keeps the older `agentic-config-kit-test` name so existing test links
+and future folder-convention experiments have a stable home.
 
 ```bash
 git clone https://github.com/Thjodann/agentic-config-kit-test.git
@@ -125,12 +143,14 @@ instructions, use [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md).
 
 In a normal team setup, Agentic Config adds:
 
-- `.ai/` - the shared source files people edit.
-- `AGENTS.md` - repo guidance for tools that read this file.
-- `sync-agentic.sh` - a repo-local compatibility command.
-- Tool-specific generated folders, such as `.cursor/`, `.claude/`, `.agents/`,
-  `.codex/`, `.windsurf/`, `.devin/`, and `.continue/`.
-- Git ignore rules so generated tool folders can stay local when appropriate.
+| Path | Purpose |
+| --- | --- |
+| `.ai/` | The shared source files people edit. |
+| `.ai/.manifest.json` | Tracks what Agentic Config generated. |
+| `AGENTS.md` | Repo guidance for tools that read this file. |
+| `sync-agentic.sh` | Repo-local compatibility command. |
+| `.gitignore` updates | Keeps generated tool folders local when appropriate. |
+| Tool-specific folders | Generated files for `.cursor/`, `.claude/`, `.agents/`, `.codex/`, `.windsurf/`, `.devin/`, and `.continue/`. |
 
 The important idea:
 
@@ -257,35 +277,15 @@ Install from this checkout instead of the public URL:
 ./install-agentic-config.sh
 ```
 
-Check the installed version:
+For later maintenance:
 
-```bash
-agentic --version
-```
-
-Check for an update:
-
-```bash
-agentic update --check
-```
-
-Update the CLI and bundled templates:
-
-```bash
-agentic update
-```
-
-Preview uninstall:
-
-```bash
-agentic uninstall --dry-run
-```
-
-Uninstall:
-
-```bash
-agentic uninstall
-```
+| Task | Command |
+| --- | --- |
+| Check the installed version | `agentic --version` |
+| Check for an update | `agentic update --check` |
+| Update the CLI and bundled templates | `agentic update` |
+| Preview uninstall | `agentic uninstall --dry-run` |
+| Uninstall | `agentic uninstall` |
 
 If the installed command is unavailable, use the standalone uninstaller:
 
@@ -329,6 +329,7 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
 | Problem | What to try |
 | --- | --- |
 | `agentic: command not found` | Restart your terminal, or add the installer's printed bin directory to `PATH`. |
+| I am not sure which command is installed | Run `agentic --version`; if that is unavailable, try `agentic-config --version`. |
 | `python3` is missing | Install Python 3.6 or newer, then rerun the installer. |
 | `agentic check` reports stale output | Run `agentic sync`, then run `agentic check` again. |
 | `agentic doctor` reports native-only files | Adopt them with `agentic adopt <ide> <path>`, use `agentic adopt --all`, or leave them native. |
