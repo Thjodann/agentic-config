@@ -1,7 +1,5 @@
 # Agentic Config
 
-![Agentic Config banner](assets/agentic-config-kit-banner.png)
-
 **Write AI assistant setup once. Use it across Claude Code, Cursor,
 Windsurf/Devin, Codex, and Continue.**
 
