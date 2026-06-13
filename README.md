@@ -8,7 +8,7 @@ and agents. It then creates the tool-specific files each AI coding environment
 expects.
 
 **Links:** [public repo](https://github.com/Thjodann/agentic-config) ·
-[safe test repo](https://github.com/Thjodann/agentic-config-kit-test) ·
+[example repo](https://github.com/Thjodann/agentic-config-example) ·
 [agent runbook](AGENTIC-CONFIG-RUNBOOK.md)
 
 ## 👀 At A Glance
@@ -38,7 +38,7 @@ they use different AI coding tools.
 | Goal | Best next step |
 | --- | --- |
 | I want to set up a real team repo | Follow [Set Up In 3 Minutes](#-set-up-in-3-minutes). |
-| I want to try it without risk | Use the [safe test repo](#-try-agentic-config-safely). |
+| I want to try it without risk | Use the [example repo](#-try-agentic-config-safely). |
 | I want my AI assistant to do it | Copy the prompt in [Let An AI Assistant Set It Up](#-let-an-ai-assistant-set-it-up). |
 | I already have AI tool files | Start with [Import Existing AI Tool Files](#-import-existing-ai-tool-files). |
 
@@ -89,7 +89,7 @@ testing, working privately, or bringing existing AI tool files into Agentic Conf
 
 | Situation | Command | What it means |
 | --- | --- | --- |
-| I want to test Agentic Config safely first | See "Try Agentic Config Safely" below | Uses a disposable repo made for Agentic Config setup tests. |
+| I want to test Agentic Config safely first | See "Try Agentic Config Safely" below | Uses an isolated example repo made for install, adoption, scanning, and sync tests. |
 | I want my team to share this config | `agentic init .` | Creates a committed `.ai/` folder for shared AI setup. |
 | I want to try this privately | `agentic init --stealth .` | Creates local-only Agentic Config files without tracked Git changes. |
 | This repo already has Cursor, Claude, Codex, or Windsurf files | `agentic doctor` | Shows what can be imported into Agentic Config. |
@@ -98,21 +98,24 @@ testing, working privately, or bringing existing AI tool files into Agentic Conf
 
 ## 🧪 Try Agentic Config Safely
 
-Use [agentic-config-kit-test](https://github.com/Thjodann/agentic-config-kit-test)
+Use [agentic-config-example](https://github.com/Thjodann/agentic-config-example)
 when you want a clonable sandbox instead of testing Agentic Config in a real project.
-The sandbox keeps the older `agentic-config-kit-test` name so existing test links
-and future folder-convention experiments have a stable home.
+The example repo is intentionally small and fixture-heavy so you can see how
+Agentic Config handles existing native agent folders.
 
 ```bash
-git clone https://github.com/Thjodann/agentic-config-kit-test.git
-cd agentic-config-kit-test
+git clone https://github.com/Thjodann/agentic-config-example.git
+cd agentic-config-example
 agentic init .
 agentic doctor
+agentic adopt --all
+agentic sync
 agentic check
+agentic doctor
 ```
 
-The test repo is useful for learning Agentic Config, checking installer behavior, and trying
-future dot-folder conventions without risking project files.
+The example repo is useful for testing installation, adoption, scanning, sync
+behavior, normal mode, and stealth mode without risking project files.
 
 ## 🤖 Let An AI Assistant Set It Up
 
@@ -340,6 +343,8 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
 
 - [github.com/Thjodann/agentic-config](https://github.com/Thjodann/agentic-config)
   is the public source repo.
+- [github.com/Thjodann/agentic-config-example](https://github.com/Thjodann/agentic-config-example)
+  is the safe example repo for install, adoption, scanning, and sync tests.
 - [.ai/README.md](.ai/README.md) explains the canonical file format, frontmatter,
   mappings, safe deletes, and advanced workflows.
 - [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md) is the canonical
