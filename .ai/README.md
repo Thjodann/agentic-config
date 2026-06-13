@@ -162,6 +162,21 @@ guidance. `doctor` flags them as Codex-only instead of adopting them as team rul
 5. Commit `.ai/`, `.ai/.manifest.json`, root `AGENTS.md`, and toolkit files. In
    source-only mode, leave generated IDE folders ignored.
 
+`adopt` only scans standard IDE asset locations (for example
+`.cursor/rules/*.mdc`, `.claude/agents/*.md`, `.cursor/skills/<name>/SKILL.md`,
+`.agents/skills/<name>/SKILL.md`). Assets kept in non-standard paths are not
+adopted; move them into a recognized location first if you want them imported.
+
+`adopt` does not delete the native file. Because its content is now captured in
+`.ai/`, the next `sync` refreshes that native path in place (it becomes a marked
+projection). Markerless native files whose content does **not** match `.ai/` are
+never overwritten; `sync` reports them so you can adopt, reconcile, or remove them.
+
+`agentic adopt --all` imports every unambiguous native asset in a single pass. A
+surface that conflicts with existing `.ai/` content (same name, different content)
+is skipped and reported instead of aborting the run, and a surface already
+captured in `.ai/` is skipped as "already represented".
+
 If `doctor` reports that a repo-native asset is shadowed by a global asset, leave
 the repo copy unpromoted. Global assets stay user-level and are not imported into
 the repo source.

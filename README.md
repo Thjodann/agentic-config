@@ -132,10 +132,40 @@ curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/instal
 agentic init .
 agentic doctor
 agentic adopt --all
-agentic sync
-agentic check
-agentic doctor
 ```
+
+> [!IMPORTANT]
+> The example repo is a **conflict drill**, not a clean happy path. It ships the
+> same fixture asset on several IDE surfaces with intentionally different
+> wording, so `adopt --all` promotes one surface per asset into `.ai/` and then
+> reports the remaining surfaces as conflicts ("still need manual resolution").
+> This is expected: Agentic Config never silently picks a winner.
+
+Finish the drill by resolving those conflicts, then sync:
+
+```bash
+# See exactly which native files conflict with .ai/ and why.
+agentic doctor
+
+# Decide a winner for each conflict. The simplest choice is to keep the
+# canonical version you just adopted and delete the divergent native copies
+# doctor lists under "Canonical conflicts", for example:
+rm .cursor/skills/fixture-skill/SKILL.md   # ...and the other listed conflicts
+
+# Now the round-trip completes cleanly.
+agentic sync
+agentic check     # In sync
+agentic doctor    # only the intentional .codex/rules policy fixture remains
+```
+
+Two things the example repo deliberately demonstrates:
+
+- **Conflicts need a human decision.** Same asset, different per-IDE wording =
+  reported, not auto-merged.
+- **`adopt` only scans standard IDE asset folders.** The bundled skills under
+  paths like `.cursor/<name>/SKILL.md` (instead of `.cursor/skills/<name>/SKILL.md`)
+  are intentionally left native; Agentic Config does not adopt skills from
+  non-standard locations.
 
 The example repo is useful for testing installation, adoption, scanning, sync
 behavior, normal mode, and stealth mode without risking project files.
@@ -216,8 +246,18 @@ agentic check
 agentic doctor
 ```
 
+`agentic adopt --all` imports every unambiguous native asset in one pass. If two
+surfaces hold the same asset with different content, it adopts the first and
+reports the rest as conflicts ("still need manual resolution") instead of
+aborting. It only scans standard IDE asset folders (for example
+`.cursor/skills/<name>/SKILL.md`), so skills kept in non-standard locations stay
+native.
+
 If `doctor` still reports conflicts or same-name files with different content,
-resolve those manually. Agentic Config will not silently choose one version for you.
+resolve those manually (keep one version, then delete or re-adopt the others)
+and run `agentic sync` again. Agentic Config will not silently choose one version
+for you. Once the source you adopted lives in `.ai/`, `agentic sync` refreshes the
+matching native files in place, so the adopt → sync → check loop completes.
 
 ## 🛠️ Daily Use
 
