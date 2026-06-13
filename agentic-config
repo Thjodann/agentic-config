@@ -44,7 +44,8 @@ LOCAL_EXCLUDE = [
 ]
 
 PROXY_COMMANDS = {
-    "sync", "check", "doctor", "bootstrap", "adopt", "reconcile", "clean",
+    "sync", "check", "doctor", "bootstrap", "adopt", "reconcile",
+    "demote", "promote", "clean",
 }
 
 
@@ -335,6 +336,8 @@ Usage:
   agentic-config adopt --all [--global]
   agentic-config reconcile <kind> <name>
   agentic-config reconcile --all-exact
+  agentic-config demote <consumer-ide> <generated-path>
+  agentic-config promote <consumer-ide> <generated-path>
   agentic-config clean [--native-duplicates] [--global]
 
 Normal init creates repo-local `.ai/` source and source-only ignore rules.

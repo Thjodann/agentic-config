@@ -156,6 +156,18 @@ Then follow the report:
 - Same-name different-content conflict: stop and ask which version should become
   canonical, or merge by editing the `.ai/` asset manually.
 
+- Cursor-visible generated overlap:
+
+  ```bash
+  agentic-config demote cursor <generated-path>
+  ```
+
+  Use this only for generated paths reported by `doctor`, such as
+  `.cursor/commands/commit.md` or `.agents/skills/command-commit/SKILL.md`.
+  Demoting an `.agents/skills/command-*` path also suppresses a Codex-target
+  projection, so prefer demoting the `.cursor/commands/*` path unless the user
+  explicitly wants to hide the Codex projection from Cursor too.
+
 `doctor` also reports supported global IDE assets such as `~/.cursor/commands/*`
 or `~/.codex/skills/*` when they overlap this repo's `.ai/` source. Treat those as
 user-level cleanup warnings, not generated repo output or project blockers.
@@ -218,6 +230,9 @@ Expected:
   That is acceptable.
 - `doctor` may report global user-level overlaps from folders such as `~/.codex/`
   or `~/.cursor/`. Those are cleanup decisions for the user, not install blockers.
+- `doctor` may report Cursor-visible overlaps when Cursor can see multiple generated
+  projections for the same concept. Those are local picker-noise decisions and can
+  be handled with `agentic-config demote cursor <generated-path>`.
 - `doctor` should not report native-only assets, exact duplicate groups, stale output,
   or canonical conflicts unless there is intentional follow-up work.
 
@@ -251,6 +266,21 @@ agentic-config check
 Use `agentic-config adopt --all --global` only when the user explicitly wants to
 import supported user-level IDE assets from `~/` into this repo's canonical `.ai/`
 source.
+
+Only when `doctor` reports generated Cursor-visible overlap and the user wants that
+specific generated projection hidden:
+
+```bash
+agentic-config demote cursor <generated-path>
+agentic-config check
+```
+
+Restore it later with:
+
+```bash
+agentic-config promote cursor <generated-path>
+agentic-config check
+```
 
 ## Step 8: Commit Source-Only Setup
 

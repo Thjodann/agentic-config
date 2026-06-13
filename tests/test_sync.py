@@ -108,6 +108,15 @@ allowed-tools: Bash, Read
 %s
 """ % (name, body))
 
+    def add_native_cursor_command(self, filename="💾 commit", name="💾 commit"):
+        write(self.path(".cursor", "commands", "%s.md" % filename), """---
+name: %s
+description: Avoid one big commit.
+---
+
+Review unstaged changes and prepare focused commits.
+""" % name)
+
 
 class SyncTests(SyncRepo):
     def test_sync_all_four_kinds_and_check(self):
@@ -526,6 +535,77 @@ Debug the failure.
         result = self.run_sync("doctor", check=False)
         self.assertEqual(result.returncode, 0)
         self.assertIn("Native duplicates already represented in .ai/", result.stdout)
+
+    def test_doctor_suggests_demote_for_cursor_visible_generated_overlap(self):
+        self.add_command("commit")
+        self.run_sync()
+        self.add_native_cursor_command()
+
+        result = self.run_sync("doctor", check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Cursor-visible overlaps:", result.stdout)
+        self.assertIn("  commit:", result.stdout)
+        self.assertIn(".cursor/commands/commit.md (generated cursor command)", result.stdout)
+        self.assertIn(".cursor/commands/💾 commit.md (native cursor command)", result.stdout)
+        self.assertIn(
+            "./sync-agentic.sh demote cursor .cursor/commands/commit.md",
+            result.stdout)
+
+    def test_demote_cursor_generated_command_keeps_native_and_codex_projection(self):
+        self.add_command("commit")
+        self.add_native_cursor_command()
+        self.run_sync()
+
+        result = self.run_sync("demote", "cursor", ".cursor/commands/commit.md")
+        self.assertIn("Demoted for cursor: .cursor/commands/commit.md", result.stdout)
+        self.assertFalse(os.path.exists(self.path(".cursor", "commands", "commit.md")))
+        self.assertTrue(os.path.exists(self.path(".cursor", "commands", "💾 commit.md")))
+        self.assertTrue(os.path.exists(
+            self.path(".agents", "skills", "command-commit", "SKILL.md")))
+        self.assertIn(".cursor/commands/commit.md", read(self.path(".ai", ".demotions.json")))
+
+        check = self.run_sync("check")
+        self.assertIn("In sync", check.stdout)
+
+    def test_demote_generated_skill_path_suppresses_projection_group(self):
+        self.add_command("commit")
+        self.run_sync()
+
+        result = self.run_sync(
+            "demote", "cursor", ".agents/skills/command-commit/SKILL.md")
+        self.assertIn("warning: suppresses a codex-target projection visible to cursor", result.stdout)
+        self.assertFalse(os.path.exists(
+            self.path(".agents", "skills", "command-commit", "SKILL.md")))
+        self.assertFalse(os.path.exists(
+            self.path(".agents", "skills", "command-commit", "agents", "openai.yaml")))
+        self.assertTrue(os.path.exists(self.path(".cursor", "commands", "commit.md")))
+
+        check = self.run_sync("check")
+        self.assertIn("In sync", check.stdout)
+
+    def test_demote_refuses_markerless_native_path(self):
+        self.add_native_cursor_command()
+
+        result = self.run_sync(
+            "demote", "cursor", ".cursor/commands/💾 commit.md", check=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing to demote markerless native file", result.stdout)
+        self.assertTrue(os.path.exists(self.path(".cursor", "commands", "💾 commit.md")))
+
+    def test_promote_restores_demoted_generated_projection(self):
+        self.add_command("commit")
+        self.run_sync()
+        self.run_sync("demote", "cursor", ".cursor/commands/commit.md")
+        self.assertFalse(os.path.exists(self.path(".cursor", "commands", "commit.md")))
+        self.assertTrue(os.path.exists(self.path(".ai", ".demotions.json")))
+
+        result = self.run_sync("promote", "cursor", ".cursor/commands/commit.md")
+        self.assertIn("Promoted for cursor: .cursor/commands/commit.md", result.stdout)
+        self.assertTrue(os.path.exists(self.path(".cursor", "commands", "commit.md")))
+        self.assertFalse(os.path.exists(self.path(".ai", ".demotions.json")))
+
+        check = self.run_sync("check")
+        self.assertIn("In sync", check.stdout)
 
     def test_bootstrap_generates_local_projections(self):
         self.add_command("bootstrap-me")

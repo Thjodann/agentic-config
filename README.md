@@ -13,6 +13,8 @@ and Continue** so no teammate is limited by their preferred agentic IDE.
 - **Multi-origin** - native IDE assets can be adopted or reconciled into `.ai/`.
 - **Global-aware** - `doctor` notices overlapping user-level assets in folders
   like `~/.cursor/` and `~/.codex/`.
+- **IDE-specific demotions** - suppress generated projections that are noisy in
+  one IDE without deleting native or global assets.
 - **Deterministic** - `check` guards against stale committed output.
 - **Safe deletes** - generated files and managed blocks are pruned without touching
   hand-written settings, MCP config, hooks, or local preferences.
@@ -196,6 +198,7 @@ Instead of memorizing CLI arguments, ask your model for what you want:
 /agentic-config add a shared rule for our API handler conventions
 /agentic-config adopt this Cursor rule into the shared config
 /agentic-config reconcile duplicate skills across the repo
+/agentic-config demote the generated Cursor commit command
 /agentic-config bootstrap this clone
 ```
 
@@ -280,6 +283,14 @@ agentic-config reconcile --all-exact
 agentic-config sync
 ```
 
+Cursor-picker-noise-first:
+
+```bash
+agentic-config doctor
+agentic-config demote cursor .cursor/commands/commit.md
+agentic-config check
+```
+
 Cleanup-first:
 
 ```bash
@@ -340,6 +351,14 @@ issues. If a global asset duplicates or conflicts with this repo's command, skil
 rule, or agent names, `doctor` reports it as a user-level warning without failing
 `doctor` or `bootstrap` on that warning alone.
 
+Cursor may surface generated paths from more than one IDE projection, such as both
+`.cursor/commands/commit.md` and `.agents/skills/command-commit/SKILL.md`.
+`doctor` reports these as Cursor-visible overlaps. Use
+`agentic-config demote cursor <generated-path>` to suppress the specific generated
+path you do not want Cursor to show, and `agentic-config promote cursor
+<generated-path>` to restore it. Demoting a `.agents/skills/command-*` path also
+suppresses that Codex-target projection, so `doctor` prints a warning for it.
+
 ## Where each IDE picks things up
 
 | IDE | Generated surfaces |
@@ -361,6 +380,9 @@ rule, or agent names, `doctor` reports it as a user-level warning without failin
   that are already represented in `.ai/`.
 - Add `--global` to that cleanup command only when you explicitly want to remove
   exact duplicate files from user-level IDE directories.
+- Use `agentic-config demote <ide> <generated-path>` only for generated paths
+  reported by `doctor`; markerless native files should be adopted, reconciled, or
+  left alone.
 - Use `agentic-config adopt --all --global` only when you explicitly want to import
   supported user-level IDE assets into the repo's canonical source.
 - Keep Codex `.codex/rules/*.rules` as Codex-only execution policy; these are not

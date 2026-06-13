@@ -6,6 +6,8 @@
 #   ./sync-agentic.sh doctor                  diagnose native-only/stale/conflicts
 #   ./sync-agentic.sh adopt cursor <path>     promote native config into .ai/
 #   ./sync-agentic.sh reconcile --all-exact   canonicalize exact duplicates
+#   ./sync-agentic.sh demote cursor <path>    hide a generated path from one IDE
+#   ./sync-agentic.sh promote cursor <path>   restore a demoted generated path
 #   ./sync-agentic.sh clean                   remove generated projections
 #   ./sync-agentic.sh bootstrap               generate local projections after clone
 set -euo pipefail

@@ -41,6 +41,8 @@ agentic-config adopt cursor .cursor/rules/my-rule.mdc
 agentic-config adopt --all
 agentic-config adopt --all --global
 agentic-config reconcile --all-exact
+agentic-config demote cursor .cursor/commands/my-command.md
+agentic-config promote cursor .cursor/commands/my-command.md
 agentic-config clean
 agentic-config clean --native-duplicates
 agentic-config clean --native-duplicates --global
@@ -59,6 +61,8 @@ agentic-config clean --native-duplicates --global
 ./sync-agentic.sh adopt --all --global
 ./sync-agentic.sh reconcile skill debug-word
 ./sync-agentic.sh reconcile --all-exact
+./sync-agentic.sh demote cursor .cursor/commands/debug-word.md
+./sync-agentic.sh promote cursor .cursor/commands/debug-word.md
 ./sync-agentic.sh clean
 ./sync-agentic.sh clean --native-duplicates
 ./sync-agentic.sh clean --native-duplicates --global
@@ -69,12 +73,13 @@ agentic-config clean --native-duplicates --global
 repo-local compatibility wrapper. `doctor` reports native-only assets, stale
 generated files, canonical conflicts, and known degradations. `adopt` promotes
 native IDE files into `.ai/`; `reconcile` canonicalizes exact duplicate native
-assets; `clean` removes generated local projections; `bootstrap` generates
-projections after clone. `doctor` also checks supported user-level directories
-like `~/.cursor/` and `~/.codex/` for assets that overlap this repo's `.ai/`
-source, while ignoring unrelated global-only personal assets. Global overlaps
-are reported as user-level warnings and do not fail `doctor` or `bootstrap` on
-their own.
+assets; `demote` suppresses one generated path for one consumer IDE; `promote`
+restores that path; `clean` removes generated local projections; `bootstrap`
+generates projections after clone. `doctor` also checks supported user-level
+directories like `~/.cursor/` and `~/.codex/` for assets that overlap this repo's
+`.ai/` source, while ignoring unrelated global-only personal assets. Global
+overlaps are reported as user-level warnings and do not fail `doctor` or
+`bootstrap` on their own.
 
 The compiler can also run from an external canonical source by setting
 `AGENTIC_CONFIG_REPO_ROOT` and `AGENTIC_CONFIG_AI_DIR`. The CLI uses this for
@@ -191,6 +196,20 @@ agentic-config sync
 `doctor` never changes files. `reconcile` only auto-merges exact normalized duplicates.
 Same-name assets with different content are reported for manual resolution.
 
+If Cursor surfaces multiple generated projections for the same concept, use an
+explicit demotion:
+
+```bash
+agentic-config doctor
+agentic-config demote cursor .cursor/commands/debug-word.md
+agentic-config check
+```
+
+Demotions are stored in `.ai/.demotions.json`, or `.agentic-config/.ai/.demotions.json`
+for stealth installs. They suppress generated output only; markerless native files
+are not deleted or archived. Demoting `.agents/skills/command-*` paths suppresses a
+Codex-target projection too, so `doctor` prints a warning before suggesting it.
+
 ## Safe Deletes
 
 The v2 manifest records generated files, hashes, and managed blocks. Removing a
@@ -203,5 +222,7 @@ while keeping `.ai/` and root `AGENTS.md`. It refuses markerless files whose byt
 longer match the manifest hash. Add `--native-duplicates` only when you want to remove
 unmanaged repo-native files that exactly match canonical assets. Add `--global` to
 that cleanup only when you also want to remove exact duplicate files from user-level
-IDE directories. Use `adopt --all --global` only when you intentionally want to pull
-supported user-level assets from `~/` into this repo's canonical source.
+IDE directories. Use `demote <ide> <generated-path>` only for generated paths
+reported by `doctor`; use `promote <ide> <generated-path>` to restore them. Use
+`adopt --all --global` only when you intentionally want to pull supported user-level
+assets from `~/` into this repo's canonical source.

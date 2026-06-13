@@ -18,6 +18,8 @@ Usage:
     python3 .ai/sync.py adopt --all --global
     python3 .ai/sync.py reconcile --all-exact
     python3 .ai/sync.py reconcile skill debug-word
+    python3 .ai/sync.py demote cursor .cursor/commands/debug-word.md
+    python3 .ai/sync.py promote cursor .cursor/commands/debug-word.md
     python3 .ai/sync.py clean --native-duplicates --global
     python3 .ai/sync.py bootstrap
 
@@ -52,10 +54,13 @@ def rel_from_repo(path):
 AI_REL = rel_from_repo(AI_DIR)
 MANIFEST = os.path.join(AI_DIR, ".manifest.json")
 MANIFEST_REL = "%s/.manifest.json" % AI_REL
+DEMOTIONS = os.path.join(AI_DIR, ".demotions.json")
+DEMOTIONS_REL = "%s/.demotions.json" % AI_REL
 COMMAND_NAME = os.environ.get("AGENTIC_CONFIG_COMMAND", "./sync-agentic.sh")
 STEALTH_MODE = os.environ.get("AGENTIC_CONFIG_STEALTH") == "1"
 STEALTH_SKIPS = []
 GENERATOR_LABEL = "agentic-config"
+DEMOTIONS_VERSION = 1
 
 TARGETS = ["claude", "cursor", "windsurf", "codex", "continue"]
 KINDS = ["rule", "agent", "command", "skill"]
@@ -158,6 +163,22 @@ def native_abspath(path):
     if os.path.isabs(expanded):
         return os.path.abspath(expanded)
     return abspath(path)
+
+
+def normalize_repo_rel_path(path):
+    path = str(path).strip().replace(os.sep, "/")
+    if path.startswith("./"):
+        path = path[2:]
+    expanded = os.path.expanduser(path)
+    if os.path.isabs(expanded):
+        ap = os.path.abspath(expanded)
+        if not is_relative_to(ap, REPO):
+            raise ValueError("%s is outside this repo; demote repo generated paths only" % path)
+        path = rel_from_repo(ap)
+    path = path.replace(os.sep, "/")
+    if path in ("", ".", "..") or path.startswith("../"):
+        raise ValueError("%s is not a repo-relative generated path" % path)
+    return path
 
 
 def native_logical_path(path):
@@ -766,7 +787,94 @@ def filter_stealth_tracked_outputs(texts, copies, managed, entries):
         ]
 
 
-def build(assets):
+def read_demotions():
+    if not os.path.isfile(DEMOTIONS):
+        return []
+    try:
+        data = json.load(open(DEMOTIONS, encoding="utf-8"))
+    except Exception as e:
+        raise SystemExit("ERROR: could not read %s (%s)" % (DEMOTIONS_REL, e))
+    if not isinstance(data, dict):
+        raise SystemExit("ERROR: %s must contain a JSON object" % DEMOTIONS_REL)
+    records = data.get("demotions", [])
+    if not isinstance(records, list):
+        raise SystemExit("ERROR: %s demotions must be a list" % DEMOTIONS_REL)
+    normalized = []
+    seen = set()
+    for record in records:
+        if not isinstance(record, dict):
+            raise SystemExit("ERROR: %s contains a non-object demotion" % DEMOTIONS_REL)
+        consumer = record.get("consumer")
+        path = record.get("path")
+        if consumer not in TARGETS or not path:
+            raise SystemExit("ERROR: %s contains an invalid demotion" % DEMOTIONS_REL)
+        item = dict(record)
+        item["path"] = normalize_repo_rel_path(path)
+        key = (consumer, item["path"])
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(item)
+    return sorted(normalized, key=lambda x: (x.get("consumer"), x.get("path")))
+
+
+def write_demotions(records):
+    records = sorted(records, key=lambda x: (x.get("consumer"), x.get("path")))
+    if not records:
+        if os.path.isfile(DEMOTIONS):
+            os.remove(DEMOTIONS)
+        return
+    content = json.dumps(
+        {"version": DEMOTIONS_VERSION, "demotions": records},
+        indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+    write_text(DEMOTIONS, content)
+
+
+def generated_output_group(path, entries):
+    path = normalize_repo_rel_path(path)
+    primary = None
+    for entry in entries:
+        if entry.get("mode", "file") == "file" and entry.get("path") == path:
+            primary = entry
+            break
+    if not primary:
+        return []
+
+    group = [primary]
+    if path.endswith("/SKILL.md"):
+        base = path[:-len("/SKILL.md")]
+        group = [
+            entry for entry in entries
+            if entry.get("mode", "file") == "file"
+            and entry.get("source") == primary.get("source")
+            and entry.get("target") == primary.get("target")
+            and entry.get("kind") == primary.get("kind")
+            and (entry.get("path") == path or entry.get("path", "").startswith(base + "/"))
+        ]
+    return sorted(group, key=lambda x: x.get("path"))
+
+
+def apply_demotions(texts, copies, entries):
+    demotions = read_demotions()
+    if not demotions:
+        return
+    suppressed = set()
+    for record in demotions:
+        group = generated_output_group(record["path"], entries)
+        if group:
+            suppressed.update(entry["path"] for entry in group)
+        else:
+            suppressed.update(record.get("group") or [record["path"]])
+    for path in suppressed:
+        texts.pop(path, None)
+        copies.pop(path, None)
+    entries[:] = [
+        entry for entry in entries
+        if entry.get("path") not in suppressed
+    ]
+
+
+def build(assets, apply_saved_demotions=True):
     names = {}
     for asset in assets:
         key = asset["name"]
@@ -814,6 +922,8 @@ def build(assets):
             "AGENTS.md", source_rel("rules"), "rule", "codex",
             mode="managed-block", block=RULES_BLOCK))
 
+    if apply_saved_demotions:
+        apply_demotions(texts, copies, entries)
     filter_stealth_tracked_outputs(texts, copies, managed, entries)
     entries.sort(key=lambda e: (e["path"], e.get("block", ""), e["source"]))
     return texts, copies, managed, entries, sorted(set(degradations))
@@ -1368,6 +1478,88 @@ def canonical_indexes(assets):
     return by_key, by_fp, by_name
 
 
+def cursor_visible_name_from_path(path):
+    rel = native_logical_path(path)
+    parts = rel.split("/")
+    if rel.startswith(".cursor/commands/") and rel.endswith(".md"):
+        return os.path.splitext(parts[-1])[0]
+    if rel.startswith(".cursor/skills/") and rel.endswith("/SKILL.md"):
+        return parts[-2]
+    if rel.startswith(".agents/skills/") and rel.endswith("/SKILL.md"):
+        return parts[-2]
+    return None
+
+
+def cursor_visibility_key(name):
+    name = portable_asset_name(name or "")
+    for prefix in ("command-", "rule-", "agent-"):
+        if name.startswith(prefix) and len(name) > len(prefix):
+            name = name[len(prefix):]
+    return slugify(name)
+
+
+def cursor_visible_generated_records(entries):
+    records = []
+    for entry in entries:
+        if entry.get("mode", "file") != "file":
+            continue
+        path = entry.get("path")
+        name = cursor_visible_name_from_path(path)
+        if not name:
+            continue
+        records.append({
+            "path": path,
+            "name": name,
+            "key": cursor_visibility_key(name),
+            "generated": True,
+            "kind": entry.get("kind"),
+            "target": entry.get("target"),
+            "source": entry.get("source"),
+        })
+    return records
+
+
+def cursor_visible_native_records(native_records):
+    records = []
+    for record in native_records:
+        asset = record["asset"]
+        name = cursor_visible_name_from_path(record["path"])
+        if not name:
+            continue
+        display_name = asset.get("name") or name
+        records.append({
+            "path": record["path"],
+            "name": display_name,
+            "key": cursor_visibility_key(display_name),
+            "generated": False,
+            "kind": asset.get("type"),
+            "target": record.get("ide"),
+            "source": record["path"],
+        })
+    return records
+
+
+def cursor_visible_overlaps(entries, native_records):
+    grouped = {}
+    for record in (
+            cursor_visible_generated_records(entries) +
+            cursor_visible_native_records(native_records)):
+        if not record["key"]:
+            continue
+        grouped.setdefault(record["key"], []).append(record)
+
+    overlaps = []
+    for key, group in sorted(grouped.items()):
+        paths = sorted(set(r["path"] for r in group))
+        has_generated = any(r["generated"] for r in group)
+        if has_generated and len(paths) > 1:
+            overlaps.append({
+                "key": key,
+                "records": sorted(group, key=lambda r: (not r["generated"], r["path"])),
+            })
+    return overlaps
+
+
 def analyze_native_state(staged_only=False):
     assets = load_assets()
     canonical_by_key, canonical_by_fp, canonical_by_name = canonical_indexes(assets)
@@ -1567,6 +1759,7 @@ def find_doctor_issues(staged_only=False):
     state["drift"] = drift
     state["degradations"] = degradations
     state["canonical_ide_prefixes"] = canonical_ide_prefix_issues(assets)
+    state["cursor_visible_overlaps"] = cursor_visible_overlaps(entries, state["records"])
     return state
 
 
@@ -1578,7 +1771,10 @@ def command_doctor(args):
         state["drift"], state["native_only"], state["exact_groups"],
         conflicts, state["unsupported"], state["canonical_ide_prefixes"],
     ])
-    if not any([has_blocking, global_conflicts, state["represented"], state["possible"], state["degradations"]]):
+    if not any([
+            has_blocking, global_conflicts, state["represented"],
+            state["possible"], state["cursor_visible_overlaps"],
+            state["degradations"]]):
         print("Doctor found no agentic config issues.")
         return 0
 
@@ -1630,6 +1826,22 @@ def command_doctor(args):
         print("Global native overlaps:")
         for item in global_conflicts:
             print("  %s" % item)
+    if state["cursor_visible_overlaps"]:
+        print("Cursor-visible overlaps:")
+        for overlap in state["cursor_visible_overlaps"]:
+            print("  %s:" % overlap["key"])
+            for record in overlap["records"]:
+                origin = "generated %s %s" % (record["target"], record["kind"])
+                if not record["generated"]:
+                    origin = "native %s %s" % (record["target"], record["kind"])
+                print("    %s (%s)" % (record["path"], origin))
+                if record["generated"]:
+                    print("      suggested: %s" % shell_command([
+                        COMMAND_NAME, "demote", "cursor", record["path"]]))
+                    if record["target"] != "cursor":
+                        print(
+                            "      warning: suppresses a %s-target projection visible to Cursor" %
+                            record["target"])
     if state["canonical_ide_prefixes"]:
         print("IDE-specific canonical names:")
         for item in state["canonical_ide_prefixes"]:
@@ -1688,6 +1900,111 @@ def command_reconcile(args):
               (args.kind, args.name))
         return 1
     except ValueError as e:
+        print("ERROR: %s" % e)
+        return 1
+
+
+def entry_for_path(entries, path):
+    for entry in entries:
+        if entry.get("mode", "file") == "file" and entry.get("path") == path:
+            return entry
+    return None
+
+
+def demotion_record(consumer, path, group, assets):
+    primary = entry_for_path(group, path) or group[0]
+    assets_by_source = dict((asset["srcrel"], asset) for asset in assets)
+    asset = assets_by_source.get(primary.get("source"))
+    name = asset["name"] if asset else cursor_visible_name_from_path(path)
+    return {
+        "consumer": consumer,
+        "path": path,
+        "source": primary.get("source"),
+        "target": primary.get("target"),
+        "kind": primary.get("kind"),
+        "name": name,
+        "group": [entry["path"] for entry in group],
+    }
+
+
+def validate_demote_args(consumer, path):
+    if consumer not in TARGETS:
+        raise ValueError("unknown consumer IDE %s (expected one of %s)" %
+                         (consumer, ", ".join(TARGETS)))
+    return normalize_repo_rel_path(path)
+
+
+def explain_missing_demotable_path(path):
+    if os.path.exists(abspath(path)) and not has_marker(path):
+        raise ValueError(
+            "refusing to demote markerless native file at %s; "
+            "demote a generated competing path instead" % path)
+    raise ValueError("%s is not a current generated projection from %s/" %
+                     (path, AI_REL))
+
+
+def upsert_demotion(record):
+    records = read_demotions()
+    key = (record["consumer"], record["path"])
+    updated = []
+    replaced = False
+    for existing in records:
+        if (existing.get("consumer"), existing.get("path")) == key:
+            updated.append(record)
+            replaced = True
+        else:
+            updated.append(existing)
+    if not replaced:
+        updated.append(record)
+    write_demotions(updated)
+    return replaced
+
+
+def command_demote(args):
+    try:
+        path = validate_demote_args(args.consumer, args.path)
+        assets = load_assets()
+        _texts, _copies, _managed, entries, _degradations = build(
+            assets, apply_saved_demotions=False)
+        group = generated_output_group(path, entries)
+        if not group:
+            explain_missing_demotable_path(path)
+        old_files = manifest_files_by_path(read_manifest_entries())
+        for entry in group:
+            if os.path.exists(abspath(entry["path"])):
+                assert_safe_file_mutation(
+                    entry["path"], old_files.get(entry["path"]), "demote")
+        record = demotion_record(args.consumer, path, group, assets)
+        replaced = upsert_demotion(record)
+        action = "Updated demotion" if replaced else "Demoted"
+        print("%s for %s: %s" % (action, args.consumer, path))
+        for entry in group:
+            print("  suppresses %s" % entry["path"])
+        if record["target"] != args.consumer:
+            print(
+                "  warning: suppresses a %s-target projection visible to %s" %
+                (record["target"], args.consumer))
+        return command_sync(check=False)
+    except (SafetyError, ValueError) as e:
+        print("ERROR: %s" % e)
+        return 1
+
+
+def command_promote(args):
+    try:
+        path = validate_demote_args(args.consumer, args.path)
+        records = read_demotions()
+        kept = [
+            record for record in records
+            if not (record.get("consumer") == args.consumer and record.get("path") == path)
+        ]
+        if len(kept) == len(records):
+            print("No demotion found for %s: %s" % (args.consumer, path))
+            return 0
+        write_demotions(kept)
+        print("Promoted for %s: %s" % (args.consumer, path))
+        return command_sync(check=False)
+    except (SafetyError, ValueError) as e:
         print("ERROR: %s" % e)
         return 1
 
@@ -1817,6 +2134,16 @@ def main(argv=None):
         ap.add_argument("name", nargs="?")
         ap.add_argument("--all-exact", action="store_true")
         return command_reconcile(ap.parse_args(argv[1:]))
+    if cmd == "demote":
+        ap = argparse.ArgumentParser(prog="sync.py demote")
+        ap.add_argument("consumer")
+        ap.add_argument("path")
+        return command_demote(ap.parse_args(argv[1:]))
+    if cmd == "promote":
+        ap = argparse.ArgumentParser(prog="sync.py promote")
+        ap.add_argument("consumer")
+        ap.add_argument("path")
+        return command_promote(ap.parse_args(argv[1:]))
     if cmd == "clean":
         ap = argparse.ArgumentParser(prog="sync.py clean")
         ap.add_argument("--native-duplicates", action="store_true")
