@@ -41,7 +41,7 @@ they use different AI coding tools.
 | --- | --- |
 | I want to set up a real team repo | Follow [Set Up In 3 Minutes](#-set-up-in-3-minutes). |
 | I want to try it without risk | Use the [example repo](#-try-agentic-config-safely). |
-| I want my AI assistant to do it | Copy the prompt in [Let An AI Assistant Set It Up](#-let-an-ai-assistant-set-it-up). |
+| I want my AI assistant to do it | Copy the model-led prompt in [Set Up In 3 Minutes](#-set-up-in-3-minutes). |
 | I already have AI tool files | Start with [Import Existing AI Tool Files](#-import-existing-ai-tool-files). |
 
 ## 🚀 Set Up In 3 Minutes
@@ -84,6 +84,26 @@ agentic check
 > `agentic doctor` does not report conflicts that need manual cleanup.
 > If you only needed a standard setup, you can stop here.
 
+**Model-led install**
+
+From inside the repo you want to set up, paste this into your AI coding
+assistant:
+
+```text
+Please install Agentic Config in this repo.
+
+Use this command if Agentic Config is not installed yet:
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
+
+Then run:
+agentic init .
+agentic doctor
+agentic check
+
+Do not delete existing Cursor, Claude, Codex, Windsurf, Devin, or Continue files
+unless I explicitly ask. If doctor reports conflicts, stop and explain them.
+```
+
 ## 🧭 Which Setup Should I Use?
 
 Most people should start with `agentic init .`. Use the other paths when you are
@@ -96,7 +116,7 @@ testing, working privately, or bringing existing AI tool files into Agentic Conf
 | I want to try this privately | `agentic init --stealth .` | Creates local-only Agentic Config files without tracked Git changes. |
 | This repo already has Cursor, Claude, Codex, or Windsurf files | `agentic doctor` | Shows what can be imported into Agentic Config. |
 | I just cloned a repo that already uses Agentic Config | `agentic bootstrap` | Regenerates local AI tool files from the shared source. |
-| I want an AI assistant to do this for me | See "Let An AI Assistant Set It Up" below | Gives your assistant a safe setup checklist. |
+| I want an AI assistant to do this for me | See "Model-led install" above | Gives your assistant a safe setup checklist. |
 
 ## 🧪 Try Agentic Config Safely
 
@@ -121,25 +141,8 @@ behavior, normal mode, and stealth mode without risking project files.
 
 ## 🤖 Let An AI Assistant Set It Up
 
-Paste this into your AI coding assistant from inside the target repo:
-
-```text
-Please install Agentic Config in this repo.
-
-Use this command if Agentic Config is not installed yet:
-curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
-
-Then run:
-agentic init .
-agentic doctor
-agentic check
-
-Use stealth mode only if I ask for no tracked Git changes:
-agentic init --stealth .
-
-Do not delete existing Cursor, Claude, Codex, Windsurf, Devin, or Continue files
-unless I explicitly ask. If doctor reports conflicts, stop and explain them.
-```
+Use the model-led prompt in [Set Up In 3 Minutes](#-set-up-in-3-minutes) for a
+standard setup.
 
 For full agent-assisted setup, update, verify, uninstall, and clean reinstall
 instructions, use [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md).
