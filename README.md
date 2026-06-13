@@ -10,7 +10,6 @@ and agents. It then creates the tool-specific files each AI coding environment
 expects.
 
 **Links:** [public repo](https://github.com/Thjodann/agentic-config) ·
-[enterprise repo](https://github.boozallencsn.com/CORNERSTONE/agentic-config) ·
 [example repo](https://github.com/Thjodann/agentic-config-example) ·
 [agent runbook](AGENTIC-CONFIG-RUNBOOK.md)
 
@@ -59,16 +58,17 @@ Public GitHub:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
 
-Enterprise GitHub:
+Private mirror:
 
 ```bash
-git clone https://github.boozallencsn.com/CORNERSTONE/agentic-config.git
+# Replace YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL with your private mirror's clone URL.
+git clone YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL agentic-config
 cd agentic-config
 ./install-agentic-config.sh
 ```
 
-Enterprise raw download URLs can require temporary authentication tokens, so the
-clone-and-install path is usually more reliable inside Enterprise GitHub.
+Private raw download URLs can require temporary authentication tokens, so the
+clone-and-install path is usually more reliable for private mirrors.
 
 **2. Confirm the command works**
 
@@ -145,8 +145,9 @@ Please install Agentic Config in this repo.
 Use this command if Agentic Config is not installed yet:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 
-If this repo should use Enterprise GitHub instead, use:
-git clone https://github.boozallencsn.com/CORNERSTONE/agentic-config.git
+If this repo should use a private mirror instead, replace the placeholder below
+with the private Agentic Config clone URL:
+git clone YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL agentic-config
 cd agentic-config
 ./install-agentic-config.sh
 
@@ -310,7 +311,7 @@ For later maintenance:
 | Check the installed version | `agentic --version` |
 | Check for a public GitHub update | `agentic update --check` |
 | Update from public GitHub | `agentic update` |
-| Update from Enterprise GitHub | Pull a clean enterprise checkout, then run `./install-agentic-config.sh`. |
+| Update from a private mirror | Pull a clean private checkout, then run `./install-agentic-config.sh`. |
 | Preview uninstall | `agentic uninstall --dry-run` |
 | Uninstall | `agentic uninstall` |
 
@@ -322,10 +323,11 @@ Public GitHub:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/uninstall-agentic-config.sh | sh
 ```
 
-Enterprise GitHub:
+Private mirror:
 
 ```bash
-git clone https://github.boozallencsn.com/CORNERSTONE/agentic-config.git
+# Replace YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL with your private mirror's clone URL.
+git clone YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL agentic-config
 cd agentic-config
 sh uninstall-agentic-config.sh
 ```
@@ -371,14 +373,12 @@ Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config
 | `agentic check` reports stale output | Run `agentic sync`, then run `agentic check` again. |
 | `agentic doctor` reports native-only files | Adopt them with `agentic adopt <ide> <path>`, use `agentic adopt --all`, or leave them native. |
 | Stealth mode skips a path | That path is already tracked by Git. Use normal mode, adopt the existing file, or resolve it manually. |
-| `curl` is blocked | Install from a local or enterprise checkout with `./install-agentic-config.sh`, or ask an assistant to follow [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md). |
+| `curl` is blocked | Install from a local or private checkout with `./install-agentic-config.sh`, or ask an assistant to follow [AGENTIC-CONFIG-RUNBOOK.md](AGENTIC-CONFIG-RUNBOOK.md). |
 
 ## 📚 More Detail
 
 - [github.com/Thjodann/agentic-config](https://github.com/Thjodann/agentic-config)
   is the public source repo.
-- [github.boozallencsn.com/CORNERSTONE/agentic-config](https://github.boozallencsn.com/CORNERSTONE/agentic-config)
-  is the enterprise source repo.
 - [github.com/Thjodann/agentic-config-example](https://github.com/Thjodann/agentic-config-example)
   is the safe example repo for install, adoption, scanning, and sync tests.
 - [.ai/README.md](.ai/README.md) explains the canonical file format, frontmatter,
