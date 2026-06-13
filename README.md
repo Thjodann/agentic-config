@@ -128,6 +128,7 @@ Agentic Config handles existing native agent folders.
 ```bash
 git clone https://github.com/Thjodann/agentic-config-example.git
 cd agentic-config-example
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 agentic init .
 agentic doctor
 agentic adopt --all
