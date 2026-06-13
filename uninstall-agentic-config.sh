@@ -1,5 +1,5 @@
 #!/bin/sh
-# Uninstall the user-level Agentic Config Kit CLI and bundled templates.
+# Uninstall the user-level Agentic Config CLI and bundled templates.
 #
 # Typical remote use:
 #   curl -fsSL <uninstall-script-url> | sh
@@ -86,18 +86,18 @@ remove_dir() {
     fi
 }
 
-echo "Agentic Config Kit uninstall"
+echo "Agentic Config uninstall"
 echo "  kit: $INSTALL_DIR"
 echo "  bin: $BIN_DIR"
 
-for name in agentic-config agc; do
+for name in agentic agentic-config agc; do
     path="$BIN_DIR/$name"
     if [ ! -e "$path" ] && [ ! -L "$path" ]; then
         echo "Skipped missing command: $path"
     elif is_managed_cli "$path"; then
         remove_file "command" "$path"
     else
-        echo "Skipped non-ACK command: $path"
+        echo "Skipped non-Agentic Config command: $path"
     fi
 done
 
@@ -105,7 +105,7 @@ if [ -e "$INSTALL_DIR" ]; then
     if install_dir_looks_managed; then
         remove_dir "kit directory" "$INSTALL_DIR"
     else
-        echo "ERROR: refusing to remove install dir that does not look ACK-managed: $INSTALL_DIR" >&2
+        echo "ERROR: refusing to remove install dir that does not look Agentic Config-managed: $INSTALL_DIR" >&2
         exit 1
     fi
 else

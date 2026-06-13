@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the Agentic Config Kit CLI and bundled templates.
+# Install the Agentic Config CLI and bundled templates.
 #
 # Typical remote use:
 #   curl -fsSL <install-script-url> | sh
@@ -41,17 +41,17 @@ if [ -z "$source_dir" ]; then
     tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/agentic-config-kit.XXXXXX")
     archive="$tmp_dir/kit.tar.gz"
     if [ -z "$ARCHIVE_URL" ]; then
-        echo "Checking latest Agentic Config Kit release..."
+        echo "Checking latest Agentic Config release..."
         release_json=$(curl -fsSL "$RELEASE_API_URL")
         release_tag=$(printf '%s\n' "$release_json" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
         if [ -z "$release_tag" ]; then
-            echo "ERROR: could not determine latest Agentic Config Kit release tag." >&2
+            echo "ERROR: could not determine latest Agentic Config release tag." >&2
             exit 1
         fi
         ARCHIVE_URL="$RELEASE_ARCHIVE_BASE/$release_tag.tar.gz"
-        echo "Downloading Agentic Config Kit $release_tag..."
+        echo "Downloading Agentic Config $release_tag..."
     else
-        echo "Downloading Agentic Config Kit..."
+        echo "Downloading Agentic Config..."
     fi
     curl -fsSL "$ARCHIVE_URL" -o "$archive"
     tar -xzf "$archive" -C "$tmp_dir"
@@ -59,7 +59,7 @@ if [ -z "$source_dir" ]; then
 fi
 
 if [ ! -f "$source_dir/agentic-config" ] || [ ! -d "$source_dir/.ai" ]; then
-    echo "ERROR: source directory is not an Agentic Config Kit checkout: $source_dir" >&2
+    echo "ERROR: source directory is not an Agentic Config checkout: $source_dir" >&2
     exit 1
 fi
 
@@ -93,7 +93,7 @@ install_cli_name() {
         elif [ -f "$dest" ] && cmp -s "$dest" "$INSTALL_DIR/agentic-config"; then
             rm -f "$dest"
         else
-            echo "WARNING: $dest already exists and is not ACK-managed; leaving it unchanged." >&2
+            echo "WARNING: $dest already exists and is not Agentic Config-managed; leaving it unchanged." >&2
             return 1
         fi
     fi
@@ -107,6 +107,12 @@ install_cli_name() {
     return 0
 }
 
+if install_cli_name "agentic"; then
+    agentic_status="installed"
+else
+    agentic_status="skipped"
+fi
+
 install_cli_name "agentic-config" "force"
 if install_cli_name "agc"; then
     agc_status="installed"
@@ -114,28 +120,39 @@ else
     agc_status="skipped"
 fi
 
-echo "Installed Agentic Config Kit:"
-echo "  kit: $INSTALL_DIR"
-echo "  cli: $BIN_DIR/agentic-config"
-if [ "$agc_status" = "installed" ]; then
-    echo "  alias: $BIN_DIR/agc"
+if [ "$agentic_status" = "installed" ]; then
+    next_cmd="agentic"
 else
-    echo "  alias: agc skipped because an existing non-ACK command was found"
+    next_cmd="agentic-config"
+fi
+
+echo "Installed Agentic Config:"
+echo "  kit: $INSTALL_DIR"
+if [ "$agentic_status" = "installed" ]; then
+    echo "  cli: $BIN_DIR/agentic"
+else
+    echo "  cli: agentic skipped because an existing non-Agentic Config command was found"
+fi
+echo "  compatibility: $BIN_DIR/agentic-config"
+if [ "$agc_status" = "installed" ]; then
+    echo "  legacy alias: $BIN_DIR/agc"
+else
+    echo "  legacy alias: agc skipped because an existing non-Agentic Config command was found"
 fi
 
 case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
     *)
         echo ""
-        echo "Add this to your PATH to use agentic-config everywhere:"
+        echo "Add this to your PATH to use $next_cmd everywhere:"
         echo "  export PATH=\"$BIN_DIR:\$PATH\""
         ;;
 esac
 
 echo ""
 echo "Next:"
-echo "  agc init /path/to/repo"
-echo "  agc init --stealth /path/to/repo"
+echo "  $next_cmd init /path/to/repo"
+echo "  $next_cmd init --stealth /path/to/repo"
 echo ""
-echo "Full command also works:"
+echo "Compatibility command also works:"
 echo "  agentic-config init /path/to/repo"

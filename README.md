@@ -1,13 +1,13 @@
-# Agentic Config Kit
+# Agentic Config
 
-![Agentic Config Kit banner](assets/agentic-config-kit-banner.png)
+![Agentic Config banner](assets/agentic-config-kit-banner.png)
 
 **Write AI assistant setup once. Use it across Claude Code, Cursor,
 Windsurf/Devin, Codex, and Continue.**
 
-Agentic Config Kit, or ACK, gives your repo one shared place for AI rules,
-commands, skills, and agents. ACK then creates the tool-specific files each AI
-coding environment expects.
+Agentic Config gives your repo one shared place for AI rules, commands, skills,
+and agents. It then creates the tool-specific files each AI coding environment
+expects.
 
 **Links:** [public repo](https://github.com/Thjodann/agentic-config-kit) ·
 [safe test repo](https://github.com/Thjodann/agentic-config-kit-test) ·
@@ -15,31 +15,31 @@ coding environment expects.
 
 ## 👀 At A Glance
 
-ACK is a translator for repo AI setup:
+Agentic Config is a translator for repo AI setup:
 
 | Step | What happens |
-| --- | --- | --- |
+| --- | --- |
 | 1 | You edit shared files in `.ai/` or `.agentic-config/.ai/`. |
-| 2 | You run `agc sync`. |
-| 3 | ACK creates the files each AI tool expects. |
+| 2 | You run `agentic sync`. |
+| 3 | Agentic Config creates the files each AI tool expects. |
 
 ```text
 Your shared AI config
 (.ai/ or .agentic-config/.ai/)
         |
-        | agc sync
+        | agentic sync
         v
 Tool-specific files for Cursor, Claude Code, Codex, Windsurf/Devin, and Continue
 ```
 
-Use ACK when you want everyone on a project to get the same AI guidance, even if
+Use Agentic Config when you want everyone on a project to get the same AI guidance, even if
 they use different AI coding tools.
 
 ## 🚀 Set Up In 3 Minutes
 
 Requirement: `python3` 3.6 or newer.
 
-**1. Install ACK**
+**1. Install Agentic Config**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
@@ -51,51 +51,51 @@ curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/in
 cd /path/to/your/repo
 ```
 
-**3. Initialize ACK**
+**3. Initialize Agentic Config**
 
 ```bash
-agc init .
+agentic init .
 ```
 
 **4. Check the result**
 
 ```bash
-agc doctor
-agc check
+agentic doctor
+agentic check
 ```
 
 > [!TIP]
-> You are done when `agc check` says the generated files are in sync, and
-> `agc doctor` does not report conflicts that need manual cleanup.
+> You are done when `agentic check` says the generated files are in sync, and
+> `agentic doctor` does not report conflicts that need manual cleanup.
 
 ## 🧭 Which Setup Should I Use?
 
-Most people should start with `agc init .`. Use the other paths when you are
-testing, working privately, or bringing existing AI tool files into ACK.
+Most people should start with `agentic init .`. Use the other paths when you are
+testing, working privately, or bringing existing AI tool files into Agentic Config.
 
 | Situation | Command | What it means |
 | --- | --- | --- |
-| I want to test ACK safely first | See "Try ACK Safely" below | Uses a disposable repo made for ACK setup tests. |
-| I want my team to share this config | `agc init .` | Creates a committed `.ai/` folder for shared AI setup. |
-| I want to try this privately | `agc init --stealth .` | Creates local-only ACK files without tracked Git changes. |
-| This repo already has Cursor, Claude, Codex, or Windsurf files | `agc doctor` | Shows what can be imported into ACK. |
-| I just cloned a repo that already uses ACK | `agc bootstrap` | Regenerates local AI tool files from the shared source. |
+| I want to test Agentic Config safely first | See "Try Agentic Config Safely" below | Uses a disposable repo made for Agentic Config setup tests. |
+| I want my team to share this config | `agentic init .` | Creates a committed `.ai/` folder for shared AI setup. |
+| I want to try this privately | `agentic init --stealth .` | Creates local-only Agentic Config files without tracked Git changes. |
+| This repo already has Cursor, Claude, Codex, or Windsurf files | `agentic doctor` | Shows what can be imported into Agentic Config. |
+| I just cloned a repo that already uses Agentic Config | `agentic bootstrap` | Regenerates local AI tool files from the shared source. |
 | I want an AI assistant to do this for me | See "Let An AI Assistant Set It Up" below | Gives your assistant a safe setup checklist. |
 
-## 🧪 Try ACK Safely
+## 🧪 Try Agentic Config Safely
 
 Use [agentic-config-kit-test](https://github.com/Thjodann/agentic-config-kit-test)
-when you want a clonable sandbox instead of testing ACK in a real project.
+when you want a clonable sandbox instead of testing Agentic Config in a real project.
 
 ```bash
 git clone https://github.com/Thjodann/agentic-config-kit-test.git
 cd agentic-config-kit-test
-agc init .
-agc doctor
-agc check
+agentic init .
+agentic doctor
+agentic check
 ```
 
-The test repo is useful for learning ACK, checking installer behavior, and trying
+The test repo is useful for learning Agentic Config, checking installer behavior, and trying
 future dot-folder conventions without risking project files.
 
 ## 🤖 Let An AI Assistant Set It Up
@@ -103,18 +103,18 @@ future dot-folder conventions without risking project files.
 Paste this into your AI coding assistant from inside the target repo:
 
 ```text
-Please install Agentic Config Kit in this repo.
+Please install Agentic Config in this repo.
 
-Use this command if ACK is not installed yet:
+Use this command if Agentic Config is not installed yet:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 
 Then run:
-agc init .
-agc doctor
-agc check
+agentic init .
+agentic doctor
+agentic check
 
 Use stealth mode only if I ask for no tracked Git changes:
-agc init --stealth .
+agentic init --stealth .
 
 Do not delete existing Cursor, Claude, Codex, Windsurf, Devin, or Continue files
 unless I explicitly ask. If doctor reports conflicts, stop and explain them.
@@ -124,9 +124,9 @@ For full agent-assisted setup and update instructions, use
 [INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md) or
 [AGENT-ASSISTED-UPDATE-RUNBOOK.md](AGENT-ASSISTED-UPDATE-RUNBOOK.md).
 
-## 📦 What ACK Adds To A Repo
+## 📦 What Agentic Config Adds To A Repo
 
-In a normal team setup, ACK adds:
+In a normal team setup, Agentic Config adds:
 
 - `.ai/` - the shared source files people edit.
 - `AGENTS.md` - repo guidance for tools that read this file.
@@ -138,38 +138,38 @@ In a normal team setup, ACK adds:
 The important idea:
 
 - Edit `.ai/`.
-- Run `agc sync`.
-- Let ACK update the tool-specific files.
+- Run `agentic sync`.
+- Let Agentic Config update the tool-specific files.
 
 Files named `example-*` are starter templates. Keep them while learning the
 format, or replace them with project-specific rules, commands, skills, and agents.
 
-Do not hand-edit files that say `AUTOGENERATED`; ACK will overwrite them.
+Do not hand-edit files that say `AUTOGENERATED`; Agentic Config will overwrite them.
 
 ## 🌓 Normal Mode vs Stealth Mode
 
 Normal mode is best for teams:
 
 ```bash
-agc init .
+agentic init .
 ```
 
 It puts the shared source in `.ai/` so it can be committed and reused by everyone.
 Usually that means committing `.ai/`, `.ai/.manifest.json`, `.gitignore`,
 `AGENTS.md`, and `sync-agentic.sh`. After cloning, each teammate can run
-`agc bootstrap`.
+`agentic bootstrap`.
 
 Stealth mode is best for private trials:
 
 ```bash
-agc init --stealth .
+agentic init --stealth .
 ```
 
 Stealth mode means "no tracked Git changes", not "no files". It stores the source
 under `.agentic-config/.ai/`, uses `.git/info/exclude` instead of `.gitignore`,
 and generates local files so your AI tools can still find them.
 
-If stealth mode reports that a generated path is already tracked by Git, ACK skips
+If stealth mode reports that a generated path is already tracked by Git, Agentic Config skips
 that path instead of changing tracked project files.
 
 ## 📥 Import Existing AI Tool Files
@@ -178,54 +178,54 @@ If a repo already has files from Cursor, Claude Code, Codex, Windsurf/Devin, or
 Continue, inspect them first:
 
 ```bash
-agc doctor
+agentic doctor
 ```
 
-If the report looks safe, import everything ACK can adopt automatically:
+If the report looks safe, import everything Agentic Config can adopt automatically:
 
 ```bash
-agc adopt --all
-agc sync
-agc check
-agc doctor
+agentic adopt --all
+agentic sync
+agentic check
+agentic doctor
 ```
 
 If `doctor` still reports conflicts or same-name files with different content,
-resolve those manually. ACK will not silently choose one version for you.
+resolve those manually. Agentic Config will not silently choose one version for you.
 
 ## 🛠️ Daily Use
 
 | Task | Command |
 | --- | --- |
-| Update generated tool files after editing `.ai/` | `agc sync` |
-| Check whether generated files are current | `agc check` |
-| Look for conflicts, duplicates, or files that can be adopted | `agc doctor` |
-| Import an existing native file | `agc adopt <ide> <path>` |
-| Import safe exact duplicates | `agc reconcile --all-exact` |
-| Regenerate files after cloning | `agc bootstrap` |
-| Remove generated local files | `agc clean` |
+| Update generated tool files after editing `.ai/` | `agentic sync` |
+| Check whether generated files are current | `agentic check` |
+| Look for conflicts, duplicates, or files that can be adopted | `agentic doctor` |
+| Import an existing native file | `agentic adopt <ide> <path>` |
+| Import safe exact duplicates | `agentic reconcile --all-exact` |
+| Regenerate files after cloning | `agentic bootstrap` |
+| Remove generated local files | `agentic clean` |
 
 Common edit flow:
 
 ```bash
 $EDITOR .ai/rules/service-style.md
-agc sync
-agc check
+agentic sync
+agentic check
 ```
 
 Common cleanup flow for a repo that already had AI tool files:
 
 ```bash
-agc doctor
-agc adopt --all
-agc sync
-agc check
-agc doctor
+agentic doctor
+agentic adopt --all
+agentic sync
+agentic check
+agentic doctor
 ```
 
 ## 🧑‍💻 Use The Installed Helper
 
-After ACK is initialized, supported tools can use the built-in
+After Agentic Config is initialized, supported tools can use the built-in
 `agentic-config-maintainer` skill or `/agentic-config` command. That means you can
 ask your AI assistant for the workflow instead of memorizing CLI options.
 
@@ -244,14 +244,15 @@ everyday repo maintenance.
 
 ## 🔄 Install, Update, Or Remove The CLI
 
-The installer creates two commands:
+The installer creates a primary command and a compatibility command:
 
 ```text
+agentic
 agentic-config
-agc
 ```
 
-`agc` is the short form used in this README. `agentic-config` is the full name.
+`agentic` is the command used in this README. `agentic-config` remains available
+for compatibility. Existing `agc` installs are treated as a legacy alias.
 
 Install from this checkout instead of the public URL:
 
@@ -262,53 +263,59 @@ Install from this checkout instead of the public URL:
 Check the installed version:
 
 ```bash
-agc --version
+agentic --version
 ```
 
 Check for an update:
 
 ```bash
-agc update --check
+agentic update --check
 ```
 
 Update the CLI and bundled templates:
 
 ```bash
-agc update
+agentic update
 ```
 
 Preview uninstall:
 
 ```bash
-agc uninstall --dry-run
+agentic uninstall --dry-run
 ```
 
 Uninstall:
 
 ```bash
-agc uninstall
+agentic uninstall
 ```
 
-Uninstall removes the ACK-managed CLI files from your user account. It does not
+If the installed command is unavailable, use the standalone uninstaller:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
+```
+
+Uninstall removes the Agentic Config-managed CLI files from your user account. It does not
 remove repo `.ai/` folders, generated IDE files, or global AI tool assets such as
 `~/.codex/skills`.
 
 ## 🩺 What Do Doctor And Check Mean?
 
-`agc check` answers one narrow question:
+`agentic check` answers one narrow question:
 
 ```text
-Do the generated tool files match the current ACK source?
+Do the generated tool files match the current Agentic Config source?
 ```
 
-`agc doctor` answers a broader workflow question:
+`agentic doctor` answers a broader workflow question:
 
 ```text
 Are there conflicts, duplicates, stale files, unsupported files, or existing tool
 files that should be imported?
 ```
 
-Run `agc check` in CI. Run `agc doctor` before committing ACK changes.
+Run `agentic check` in CI. Run `agentic doctor` before committing Agentic Config changes.
 
 ## 🧰 Supported Tools
 
@@ -324,10 +331,10 @@ Run `agc check` in CI. Run `agc doctor` before committing ACK changes.
 
 | Problem | What to try |
 | --- | --- |
-| `agc: command not found` | Restart your terminal, or add the installer's printed bin directory to `PATH`. |
+| `agentic: command not found` | Restart your terminal, or add the installer's printed bin directory to `PATH`. |
 | `python3` is missing | Install Python 3.6 or newer, then rerun the installer. |
-| `agc check` reports stale output | Run `agc sync`, then run `agc check` again. |
-| `agc doctor` reports native-only files | Adopt them with `agc adopt <ide> <path>`, use `agc adopt --all`, or leave them native. |
+| `agentic check` reports stale output | Run `agentic sync`, then run `agentic check` again. |
+| `agentic doctor` reports native-only files | Adopt them with `agentic adopt <ide> <path>`, use `agentic adopt --all`, or leave them native. |
 | Stealth mode skips a path | That path is already tracked by Git. Use normal mode, adopt the existing file, or resolve it manually. |
 | `curl` is blocked | Install from a local checkout with `./install-agentic-config.sh`, or ask an assistant to follow [INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md). |
 
@@ -337,20 +344,20 @@ Run `agc check` in CI. Run `agc doctor` before committing ACK changes.
   is the public source repo.
 - [.ai/README.md](.ai/README.md) explains the canonical file format, frontmatter,
   mappings, safe deletes, and advanced workflows.
-- [INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md) is for assistants setting up ACK in
+- [INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md) is for assistants setting up Agentic Config in
   another repo.
 - [AGENT-ASSISTED-UPDATE-RUNBOOK.md](AGENT-ASSISTED-UPDATE-RUNBOOK.md) is for
-  updating an existing ACK setup safely.
+  updating an existing Agentic Config setup safely.
 - [CHANGELOG.md](CHANGELOG.md) lists release changes.
 
 ## 🛡️ Guardrails
 
 - Edit `.ai/` or `.agentic-config/.ai/`, not generated files.
-- Run `agc sync` after changing ACK source files.
-- Run `agc check` before committing.
-- Run `agc doctor` when adopting existing tool files or cleaning up a repo.
+- Run `agentic sync` after changing Agentic Config source files.
+- Run `agentic check` before committing.
+- Run `agentic doctor` when adopting existing tool files or cleaning up a repo.
 - Do not delete native IDE files unless you mean to remove them.
-- Keep Codex `.codex/rules/*.rules` as Codex-only execution policy; ACK does not
+- Keep Codex `.codex/rules/*.rules` as Codex-only execution policy; Agentic Config does not
   treat them as portable team rules.
 
 ## 📄 License

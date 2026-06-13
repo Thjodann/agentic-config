@@ -66,6 +66,21 @@ class VersionUpdateTests(unittest.TestCase):
         self.assertTrue(cli.is_newer_version("1.0.0", "1.0.0-rc.1"))
         self.assertFalse(cli.is_newer_version("1.0.0-rc.1", "1.0.0"))
 
+    def test_command_name_prefers_agentic_and_preserves_compat_aliases(self):
+        cli = load_cli_module()
+        original_argv = sys.argv[:]
+        try:
+            for executable, expected in [
+                    ("/tmp/agentic", "agentic"),
+                    ("/tmp/agentic-config", "agentic-config"),
+                    ("/tmp/agc", "agc"),
+                    ("/tmp/renamed-wrapper", "agentic"),
+            ]:
+                sys.argv = [executable]
+                self.assertEqual(expected, cli.command_name())
+        finally:
+            sys.argv = original_argv
+
     def test_release_selection_ignores_prereleases_and_drafts(self):
         cli = load_cli_module()
         release = cli.select_release([
@@ -82,22 +97,22 @@ class VersionUpdateTests(unittest.TestCase):
         self.assertIn(
             "curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh",
             readme)
+        self.assertIn("[INSTALLER-RUNBOOK.md](INSTALLER-RUNBOOK.md)", readme)
         self.assertIn(
-            "https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/INSTALLER-RUNBOOK.md",
+            "[AGENT-ASSISTED-UPDATE-RUNBOOK.md](AGENT-ASSISTED-UPDATE-RUNBOOK.md)",
             readme)
-        self.assertIn(
-            "https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/AGENT-ASSISTED-UPDATE-RUNBOOK.md",
-            readme)
-        self.assertIn("agc init --stealth .", readme)
+        self.assertIn("agentic init --stealth .", readme)
+        self.assertNotIn("agc init", readme)
+        self.assertNotIn("Agentic Config Kit, or ACK", readme)
         self.assertIn("model-agnostic and operating-system-agnostic", update_runbook)
         self.assertIn("Model Suitability Notice", install_runbook)
         self.assertIn("Model Suitability Notice", update_runbook)
-        self.assertIn("stronger coding/reasoning model", readme)
+        self.assertIn("stronger coding/reasoning model", install_runbook)
         self.assertIn("latest stable GitHub Release", update_runbook)
         self.assertIn("Never run angle-bracket placeholders literally", update_runbook)
         self.assertIn("sh -n install-agentic-config.sh\nsh -n uninstall-agentic-config.sh\nsh -n sync-agentic.sh\nsh -n install.sh",
                       update_runbook)
-        self.assertIn("agc uninstall --dry-run", readme)
+        self.assertIn("agentic uninstall --dry-run", readme)
         self.assertIn("uninstall-agentic-config.sh | sh", readme)
         self.assertIn("sh -n uninstall-agentic-config.sh", update_runbook)
         self.assertNotIn("remote default branch HEAD", update_runbook)
@@ -399,7 +414,7 @@ Make a plan.
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(".cursor/commands/📋 plan.md: native-only", result.stdout)
         self.assertIn(
-            "suggested: ./sync-agentic.sh adopt cursor '.cursor/commands/📋 plan.md'",
+            "suggested: agentic adopt cursor '.cursor/commands/📋 plan.md'",
             result.stdout)
 
     def test_codex_rules_are_reported_as_policy_not_portable_rules(self):
@@ -586,7 +601,7 @@ Debug from the user-level skill.
         result = self.run_sync("doctor", check=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Exact duplicate native groups", result.stdout)
-        self.assertIn("./sync-agentic.sh reconcile skill shared-debug", result.stdout)
+        self.assertIn("agentic reconcile skill shared-debug", result.stdout)
 
     def test_reconcile_one_exact_duplicate_group(self):
         for root in [".cursor/skills", ".agents/skills", ".claude/skills"]:
@@ -695,7 +710,7 @@ Debug the failure.
         self.assertIn(".cursor/commands/commit.md (generated cursor command)", result.stdout)
         self.assertIn(".cursor/commands/💾 commit.md (native cursor command)", result.stdout)
         self.assertIn(
-            "./sync-agentic.sh demote cursor .cursor/commands/commit.md",
+            "agentic demote cursor .cursor/commands/commit.md",
             result.stdout)
 
     def test_demote_cursor_generated_command_keeps_native_and_codex_projection(self):
@@ -978,7 +993,7 @@ class CliTests(unittest.TestCase):
         self.env.pop("AGENTIC_CONFIG_NO_UPDATE_CHECK", None)
 
         result = self.run_cli("init", "--stealth", self.tmp)
-        self.assertIn("Agentic Config Kit update available: 0.1.0 -> 0.2.0",
+        self.assertIn("Agentic Config update available: 0.1.0 -> 0.2.0",
                       result.stdout)
         self.assertIn("Run: agentic-config update", result.stdout)
 
@@ -1023,10 +1038,15 @@ class CliTests(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
+        installed_agentic = os.path.join(install_bin, "agentic")
         installed_cli = os.path.join(install_bin, "agentic-config")
         installed_agc = os.path.join(install_bin, "agc")
+        self.assertTrue(os.path.exists(installed_agentic))
         self.assertTrue(os.path.exists(installed_cli))
         self.assertTrue(os.path.exists(installed_agc))
+        self.assertIn("cli: %s" % installed_agentic, result.stdout)
+        self.assertIn("compatibility: %s" % installed_cli, result.stdout)
+        self.assertIn("Next:\n  agentic init", result.stdout)
         self.assertTrue(os.path.exists(os.path.join(
             install_home, "uninstall-agentic-config.sh")))
         self.assertTrue(os.path.exists(os.path.join(
@@ -1034,14 +1054,32 @@ class CliTests(unittest.TestCase):
         installed_env = dict(self.env)
         installed_env.pop("AGENTIC_CONFIG_KIT_DIR", None)
         help_result = subprocess.run(
-            [installed_cli, "--help"],
+            [installed_agentic, "--help"],
             cwd=self.tmp,
             env=installed_env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, help_result.returncode, help_result.stdout)
-        self.assertIn("agentic-config init", help_result.stdout)
+        self.assertIn("agentic init", help_result.stdout)
+        agentic_result = subprocess.run(
+            [installed_agentic, "--version"],
+            cwd=self.tmp,
+            env=installed_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, agentic_result.returncode, agentic_result.stdout)
+        self.assertEqual("agentic 0.1.0", agentic_result.stdout.strip())
+        compat_result = subprocess.run(
+            [installed_cli, "--version"],
+            cwd=self.tmp,
+            env=installed_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, compat_result.returncode, compat_result.stdout)
+        self.assertEqual("agentic-config 0.1.0", compat_result.stdout.strip())
         agc_result = subprocess.run(
             [installed_agc, "--version"],
             cwd=self.tmp,
@@ -1065,10 +1103,11 @@ class CliTests(unittest.TestCase):
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT)
+        installed_agentic = os.path.join(install_bin, "agentic")
         installed_cli = os.path.join(install_bin, "agentic-config")
 
         result = subprocess.run(
-            [installed_cli, "uninstall", "--dry-run"],
+            [installed_agentic, "uninstall", "--dry-run"],
             cwd=self.tmp,
             env=env,
             text=True,
@@ -1077,6 +1116,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertIn("Would remove command", result.stdout)
         self.assertIn("Would remove kit directory", result.stdout)
+        self.assertTrue(os.path.exists(installed_agentic))
         self.assertTrue(os.path.exists(installed_cli))
         self.assertTrue(os.path.exists(install_home))
 
@@ -1096,10 +1136,11 @@ class CliTests(unittest.TestCase):
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT)
+        installed_agentic = os.path.join(install_bin, "agentic")
         installed_cli = os.path.join(install_bin, "agentic-config")
 
         result = subprocess.run(
-            [installed_cli, "uninstall"],
+            [installed_agentic, "uninstall"],
             cwd=self.tmp,
             env=env,
             text=True,
@@ -1107,6 +1148,7 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertIn("Uninstall complete", result.stdout)
+        self.assertFalse(os.path.exists(installed_agentic))
         self.assertFalse(os.path.exists(installed_cli))
         self.assertFalse(os.path.exists(install_home))
         self.assertTrue(os.path.exists(foreign_agc))
@@ -1135,6 +1177,7 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertIn("Uninstall complete", result.stdout)
+        self.assertFalse(os.path.exists(os.path.join(install_bin, "agentic")))
         self.assertFalse(os.path.exists(os.path.join(install_bin, "agentic-config")))
         self.assertFalse(os.path.exists(os.path.join(install_bin, "agc")))
         self.assertFalse(os.path.exists(install_home))
@@ -1190,7 +1233,33 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertIn("agc skipped", result.stdout)
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic")))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
         self.assertEqual("#!/bin/sh\necho foreign\n", read(foreign_agc))
+
+    def test_installer_does_not_overwrite_foreign_agentic(self):
+        install_home = self.path("home", "share", "agentic-config-kit")
+        install_bin = self.path("home", "bin")
+        os.makedirs(install_bin)
+        foreign_agentic = os.path.join(install_bin, "agentic")
+        write(foreign_agentic, "#!/bin/sh\necho foreign\n")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+
+        result = subprocess.run(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertIn("agentic skipped", result.stdout)
+        self.assertIn("Next:\n  agentic-config init", result.stdout)
+        self.assertEqual("#!/bin/sh\necho foreign\n", read(foreign_agentic))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
 
     def test_curl_pipe_installer_uses_extracted_archive_child(self):
         archive_path = self.path("agentic-config-kit-main.tar.gz")
@@ -1233,6 +1302,7 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertTrue(os.path.exists(os.path.join(install_home, ".ai", "sync.py")))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agc")))
 
@@ -1269,8 +1339,9 @@ class CliTests(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, update.returncode, update.stdout)
-        self.assertIn("Updating Agentic Config Kit: 0.1.0 -> 0.2.0", update.stdout)
+        self.assertIn("Updating Agentic Config: 0.1.0 -> 0.2.0", update.stdout)
         self.assertEqual("0.2.0\n", read(os.path.join(install_home, "VERSION")))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agc")))
 
 

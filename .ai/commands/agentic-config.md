@@ -7,12 +7,12 @@ argument-hint: "[what you want to do]"
 # /agentic-config
 
 Handle the user's request conversationally. Do not require them to know
-`agentic-config` or `sync-agentic.sh` arguments.
+`agentic` or `sync-agentic.sh` arguments.
 
 1. Use the `agentic-config-maintainer` skill.
-2. Run `agentic-config doctor` unless the request is purely explanatory.
+2. Run `agentic doctor` unless the request is purely explanatory.
 3. Infer the action: init, stealth init, add, adopt, reconcile, bootstrap, clean, doctor, sync, or check.
 4. Ask only if the asset type, target file, or conflict winner is genuinely ambiguous.
 5. Prefer canonical `.ai/` edits over generated IDE files.
-6. After changes, run `agentic-config sync` and `agentic-config check`.
-7. If `agentic-config` is unavailable but `./sync-agentic.sh` exists, use the wrapper.
+6. After changes, run `agentic sync` and `agentic check`.
+7. If `agentic` is unavailable but `./sync-agentic.sh` exists, use the wrapper.

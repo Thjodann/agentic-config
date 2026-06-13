@@ -13,11 +13,11 @@ Obsidian; these links are ordinary Markdown.
 ## Daily Flow
 
 1. Create or edit a native IDE asset or a canonical `.ai/` asset.
-2. Run `agentic-config doctor`.
+2. Run `agentic doctor`.
 3. If the asset is native-only, run the suggested `adopt` command.
-4. If doctor reports exact duplicate groups, run `agentic-config reconcile <kind> <name>` or `agentic-config reconcile --all-exact`.
+4. If doctor reports exact duplicate groups, run `agentic reconcile <kind> <name>` or `agentic reconcile --all-exact`.
 5. If doctor reports global duplicates in `~/.cursor/`, `~/.codex/`, or another user-level IDE directory, treat them as user-level warnings and clean or adopt them only when the user explicitly asks.
-6. Run `agentic-config sync`.
+6. Run `agentic sync`.
 7. Commit `.ai/`, `AGENTS.md`, and toolkit files. Generated IDE folders can stay ignored.
 
 ## Bootstrap
@@ -25,5 +25,5 @@ Obsidian; these links are ordinary Markdown.
 After cloning a source-only repo:
 
 ```bash
-agentic-config bootstrap
+agentic bootstrap
 ```

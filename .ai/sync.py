@@ -3,7 +3,7 @@
 sync.py - Bidirectional agentic config compiler.
 
 The `.ai/` folder is the durable source of truth for a repo's shared
-Agentic Config Kit assets. Supported IDE-native files can also be used as
+Agentic Config assets. Supported IDE-native files can also be used as
 contribution surfaces: `adopt` imports them into `.ai/`, then `sync` exports
 canonical equivalents for every supported IDE.
 
@@ -55,7 +55,7 @@ MANIFEST = os.path.join(AI_DIR, ".manifest.json")
 MANIFEST_REL = "%s/.manifest.json" % AI_REL
 DEMOTIONS = os.path.join(AI_DIR, ".demotions.json")
 DEMOTIONS_REL = "%s/.demotions.json" % AI_REL
-COMMAND_NAME = os.environ.get("AGENTIC_CONFIG_COMMAND", "./sync-agentic.sh")
+COMMAND_NAME = os.environ.get("AGENTIC_CONFIG_COMMAND", "agentic")
 STEALTH_MODE = os.environ.get("AGENTIC_CONFIG_STEALTH") == "1"
 STEALTH_SKIPS = []
 GENERATOR_LABEL = "agentic-config"

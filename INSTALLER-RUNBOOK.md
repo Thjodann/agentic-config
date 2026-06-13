@@ -1,6 +1,6 @@
-# Agentic Config Kit Installer Runbook
+# Agentic Config Installer Runbook
 
-Use this runbook when a user asks to set up the Agentic Config Kit in another
+Use this runbook when a user asks to set up Agentic Config in another
 repository. It is written for an assisting model or coding agent to execute on the
 user's behalf.
 
@@ -24,7 +24,7 @@ Prefer a stronger model or a more capable agent when:
 
 ## Goal
 
-Bring a target repository up to the standard Agentic Config Kit setup:
+Bring a target repository up to the standard Agentic Config setup:
 
 - canonical shared assets in `.ai/`;
 - generated local projections for Cursor, Codex, Claude Code, Windsurf/Devin, and Continue;
@@ -36,18 +36,18 @@ Bring a target repository up to the standard Agentic Config Kit setup:
 Prefer the CLI path:
 
 ```bash
-agc init /path/to/target-repo
+agentic init /path/to/target-repo
 ```
 
 Use stealth when the user wants no tracked Git changes:
 
 ```bash
-agc init --stealth /path/to/target-repo
+agentic init --stealth /path/to/target-repo
 ```
 
-`agentic-config` is the full command name and works everywhere `agc` is shown.
-The installer creates both entrypoints unless an unrelated `agc` command already
-exists.
+`agentic-config` is the compatibility command and works everywhere `agentic` is
+shown. The installer always creates `agentic-config`; it creates `agentic` unless
+an unrelated command already owns that name.
 
 ## Inputs
 
@@ -89,28 +89,28 @@ find /path/to/target-repo -maxdepth 2 \( -name .ai -o -name sync-agentic.sh -o -
 
 Interpretation:
 
-- No `.ai/`: use `agentic-config init`.
+- No `.ai/`: use `agentic init`.
 - Existing `.ai/`: do not run `install.sh`; inspect and plan an upgrade.
 - Existing native IDE folders: install first, then run `doctor` and consider `adopt`
   or `reconcile`.
-- User asked for no repo changes: use `agentic-config init --stealth` and explain the
+- User asked for no repo changes: use `agentic init --stealth` and explain the
   fidelity caveat if tracked paths are skipped.
 
-## Step 2: Install The Kit
+## Step 2: Install Agentic Config
 
 Preferred:
 
 ```bash
-agc init /path/to/target-repo
+agentic init /path/to/target-repo
 ```
 
 To install the optional pre-commit guard:
 
 ```bash
-agc init --install-hook /path/to/target-repo
+agentic init --install-hook /path/to/target-repo
 ```
 
-If `agentic-config` or `agc` is not installed yet, install the latest stable
+If `agentic` or `agentic-config` is not installed yet, install the latest stable
 GitHub Release:
 
 ```bash
@@ -143,7 +143,7 @@ In the target repo:
 
 ```bash
 cd /path/to/target-repo
-agentic-config bootstrap
+agentic bootstrap
 ```
 
 This generates local IDE projections from `.ai/` and prints a doctor report.
@@ -151,7 +151,7 @@ This generates local IDE projections from `.ai/` and prints a doctor report.
 For stealth repos, the same command discovers `.agentic-config/.ai/`:
 
 ```bash
-agentic-config bootstrap
+agentic bootstrap
 ```
 
 ## Step 4: Reconcile Existing Native Config
@@ -159,7 +159,7 @@ agentic-config bootstrap
 In the target repo:
 
 ```bash
-agentic-config doctor
+agentic doctor
 ```
 
 Then follow the report:
@@ -167,19 +167,19 @@ Then follow the report:
 - Native-only single asset:
 
   ```bash
-  agentic-config adopt <ide> <path>
+  agentic adopt <ide> <path>
   ```
 
 - Exact duplicate group:
 
   ```bash
-  agentic-config reconcile <kind> <name>
+  agentic reconcile <kind> <name>
   ```
 
 - All exact duplicate groups:
 
   ```bash
-  agentic-config reconcile --all-exact
+  agentic reconcile --all-exact
   ```
 
 - Same-name different-content conflict: stop and ask which version should become
@@ -192,7 +192,7 @@ Then follow the report:
 - Cursor-visible generated overlap:
 
   ```bash
-  agentic-config demote cursor <generated-path>
+  agentic demote cursor <generated-path>
   ```
 
   Use this only for generated paths reported by `doctor`, such as
@@ -210,8 +210,8 @@ skips it. Global assets stay user-level and are not imported into the repo sourc
 After adoption or reconciliation:
 
 ```bash
-agentic-config sync
-agentic-config check
+agentic sync
+agentic check
 ```
 
 ## Step 5: Seed A Repo With No Agentic Assets
@@ -254,8 +254,8 @@ Create a small placeholder rule only when they explicitly want a ready-to-edit s
 In the target repo:
 
 ```bash
-agentic-config doctor
-agentic-config check
+agentic doctor
+agentic check
 ```
 
 Expected:
@@ -269,7 +269,7 @@ Expected:
   assets should not be adopted into `.ai/`; the global asset already wins.
 - `doctor` may report Cursor-visible overlaps when Cursor can see multiple generated
   projections for the same concept. Those are local picker-noise decisions and can
-  be handled with `agentic-config demote cursor <generated-path>`.
+  be handled with `agentic demote cursor <generated-path>`.
 - `doctor` should not report native-only assets, exact duplicate groups, stale output,
   or canonical conflicts unless there is intentional follow-up work.
 
@@ -278,17 +278,17 @@ Expected:
 Only when the user asks to clean local generated output:
 
 ```bash
-agentic-config clean
-agentic-config bootstrap
+agentic clean
+agentic bootstrap
 ```
 
 Only when `doctor` reports exact repo-native duplicates already represented in `.ai/`
 and the user wants them removed:
 
 ```bash
-agentic-config clean --native-duplicates
-agentic-config sync
-agentic-config check
+agentic clean --native-duplicates
+agentic sync
+agentic check
 ```
 
 Do not clean or import global user-level assets from `~/`. `doctor` reports overlaps
@@ -299,15 +299,15 @@ Only when `doctor` reports generated Cursor-visible overlap and the user wants t
 specific generated projection hidden:
 
 ```bash
-agentic-config demote cursor <generated-path>
-agentic-config check
+agentic demote cursor <generated-path>
+agentic check
 ```
 
 Restore it later with:
 
 ```bash
-agentic-config promote cursor <generated-path>
-agentic-config check
+agentic promote cursor <generated-path>
+agentic check
 ```
 
 ## Step 8: Commit Source-Only Setup
@@ -332,10 +332,10 @@ Give the user this short handoff:
 Your repo now has shared `.ai/` agentic config.
 
 After cloning, run:
-  agentic-config bootstrap
+  agentic bootstrap
 
-To add or adopt AI config, ask your model to use the agentic-config skill, or run:
-  agentic-config doctor
+To add or adopt AI config, ask your model to use the agentic-config-maintainer skill, or run:
+  agentic doctor
 
 The easy path is to ask your IDE's model for `/agentic-config` or
 `agentic-config-maintainer`. It can add shared rules/commands/skills/agents, adopt
@@ -349,27 +349,27 @@ Generated IDE folders are local projections and stay ignored.
 For stealth setup, hand off this instead:
 
 ```text
-Your repo has local-only Agentic Config Kit projections.
+Your repo has local-only Agentic Config projections.
 
 The source lives at `.agentic-config/.ai/` and is excluded through `.git/info/exclude`.
 Generated IDE folders are also local ignored files. No tracked Git files were changed.
 
 Use:
-  agentic-config doctor
-  agentic-config sync
-  agentic-config check
+  agentic doctor
+  agentic sync
+  agentic check
 
 If the tool reported skipped tracked paths, use normal init or manually adopt/resolve
 those files for full team-sharing fidelity.
 ```
 
-## Optional: Ask An Agent To Install ACK
+## Optional: Ask An Agent To Install Agentic Config
 
 When curl is unavailable or the user wants an IDE agent to perform the setup, give
 the agent this exact prompt:
 
 ```text
-Please install Agentic Config Kit in this repo.
+Please install Agentic Config in this repo.
 
 Runbook:
 https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/INSTALLER-RUNBOOK.md
@@ -378,65 +378,65 @@ Prefer this install command:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 
 Then initialize this repo with:
-agc init .
+agentic init .
 
 Use stealth mode instead only if I ask for no tracked Git changes:
-agc init --stealth .
+agentic init --stealth .
 ```
 
-## Updating ACK
+## Updating Agentic Config
 
-ACK uses SemVer GitHub Release tags such as `v0.1.0`. Stable releases are the
+Agentic Config uses SemVer GitHub Release tags such as `v0.1.0`. Stable releases are the
 canonical install/update source; prereleases are ignored by default.
 
 Check the installed version:
 
 ```bash
-agc --version
+agentic --version
 ```
 
 Check for updates:
 
 ```bash
-agc update --check
+agentic update --check
 ```
 
 Install the latest stable release:
 
 ```bash
-agc update
+agentic update
 ```
 
 Install a specific release:
 
 ```bash
-agc update --version v0.1.0
+agentic update --version v0.1.0
 ```
 
 Self-update refreshes the global CLI and bundled templates. It does not overwrite
 a target repo's initialized `.ai/` or `.agentic-config/.ai/` source.
 
-## Uninstalling Or Clean Reinstalling ACK
+## Uninstalling Or Clean Reinstalling Agentic Config
 
 Preview what the user-level install would remove:
 
 ```bash
-agc uninstall --dry-run
+agentic uninstall --dry-run
 ```
 
-Uninstall the ACK-managed CLI entries and bundled kit:
+Uninstall the Agentic Config-managed CLI entries and bundled kit:
 
 ```bash
-agc uninstall
+agentic uninstall
 ```
 
-If `agc` is unavailable, run the standalone uninstaller:
+If `agentic` is unavailable, run the standalone uninstaller:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
 ```
 
-This removes only ACK-managed entries under
+This removes only Agentic Config-managed entries under
 `${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}` and the kit directory under
 `${AGENTIC_CONFIG_HOME:-$HOME/.local/share/agentic-config-kit}`. It leaves repo
 `.ai/`, stealth `.agentic-config/.ai/`, generated IDE projections, and global IDE
@@ -445,6 +445,6 @@ assets alone.
 For a clean reinstall:
 
 ```bash
-agc uninstall
+agentic uninstall
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 ```

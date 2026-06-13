@@ -11,7 +11,7 @@ ask in plain language; infer the correct command sequence and handle the argumen
 
 ## Start
 
-1. Run `agentic-config doctor` unless the user only asks a conceptual question.
+1. Run `agentic doctor` unless the user only asks a conceptual question.
    If the global CLI is unavailable but `./sync-agentic.sh` exists, use the wrapper.
 2. Read the relevant `.ai/` asset or native IDE file before changing it.
 3. Decide the safest action from the user's intent and the doctor output.
@@ -21,22 +21,22 @@ ask in plain language; infer the correct command sequence and handle the argumen
 - Add a new shared asset: create the canonical `.ai/rules`, `.ai/commands`,
   `.ai/skills`, or `.ai/agents` file directly, then run sync and check.
 - Adopt one native asset: infer the IDE from the path and run
-  `agentic-config adopt <ide> <path>`.
-- Reconcile duplicates: run `agentic-config reconcile <kind> <name>` for one
-  exact group, or `agentic-config reconcile --all-exact` when doctor reports
+  `agentic adopt <ide> <path>`.
+- Reconcile duplicates: run `agentic reconcile <kind> <name>` for one
+  exact group, or `agentic reconcile --all-exact` when doctor reports
   exact duplicate groups and the user asks to reconcile all of them.
-- Bootstrap a clone: run `agentic-config bootstrap`.
-- Stealth setup: run `agentic-config init --stealth <repo>` only when the user
+- Bootstrap a clone: run `agentic bootstrap`.
+- Stealth setup: run `agentic init --stealth <repo>` only when the user
   explicitly wants local ignored projections without tracked Git changes.
-- Clean generated files: run `agentic-config clean` only when the user asks to
+- Clean generated files: run `agentic clean` only when the user asks to
   remove local generated projections.
-- Clean native duplicates: run `agentic-config clean --native-duplicates` only
+- Clean native duplicates: run `agentic clean --native-duplicates` only
   when doctor reports exact repo-native duplicates already represented in `.ai/`.
 - Clean global native duplicates: run
-  `agentic-config clean --native-duplicates --global` only when doctor reports
+  `agentic clean --native-duplicates --global` only when doctor reports
   exact user-level duplicates and the user explicitly wants global cleanup.
 
-After any mutation, run `agentic-config sync` and `agentic-config check`.
+After any mutation, run `agentic sync` and `agentic check`.
 
 ## Asking
 
@@ -50,7 +50,7 @@ Ask only when the next action is ambiguous, such as:
 
 ## Guardrails
 
-- Do not expect the user to know `agentic-config` or `sync-agentic.sh` arguments.
+- Do not expect the user to know `agentic` or `sync-agentic.sh` arguments.
 - In stealth mode, do not edit `.gitignore`; tracked generated paths and tracked
   `AGENTS.md` must be skipped and reported.
 - Do not treat Codex `.codex/rules/*.rules` files as portable behavioral rules; they are execution policy.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-agentic-config - Setup and operate Agentic Config Kit repositories.
+agentic - Setup and operate Agentic Config repositories.
 
 This executable is intentionally small. Repo behavior lives in `.ai/sync.py`;
 this wrapper handles installation/init ergonomics and then delegates.
@@ -71,9 +71,9 @@ def eprint(message):
 
 def command_name():
     name = os.path.basename(sys.argv[0] or "")
-    if name == "agc":
-        return "agc"
-    return "agentic-config"
+    if name in ("agentic", "agentic-config", "agc"):
+        return name
+    return "agentic"
 
 
 def version_file():
@@ -203,7 +203,7 @@ def latest_release(timeout=10):
     payload = fetch_json(release_api_url(), timeout=timeout)
     release = select_release(payload)
     if not release:
-        raise RuntimeError("no stable Agentic Config Kit release found")
+        raise RuntimeError("no stable Agentic Config release found")
     tag = release["tag_name"]
     return {
         "tag": tag,
@@ -276,7 +276,7 @@ def print_update_notice(release, command):
     latest = release.get("version") or release.get("tag")
     current = current_version()
     eprint("")
-    eprint("Agentic Config Kit update available: %s -> %s" % (current, latest))
+    eprint("Agentic Config update available: %s -> %s" % (current, latest))
     eprint("Run: %s update" % command)
     if release.get("url"):
         eprint("Release: %s" % release["url"])
@@ -308,7 +308,7 @@ def ensure_kit():
     ]
     missing = [p for p in required if not os.path.exists(p)]
     if missing:
-        eprint("ERROR: agentic-config cannot find its bundled kit files.")
+        eprint("ERROR: %s cannot find its bundled files." % command_name())
         for p in missing:
             eprint("  missing %s" % p)
         eprint("Set AGENTIC_CONFIG_KIT_DIR to a full agentic-config-kit checkout.")
@@ -423,8 +423,8 @@ def install_hook(repo):
 
 def command_init(argv):
     parser = argparse.ArgumentParser(
-        prog="agentic-config init",
-        description="Initialize Agentic Config Kit in a repository.")
+        prog="%s init" % command_name(),
+        description="Initialize Agentic Config in a repository.")
     parser.add_argument("path", nargs="?", default=".")
     parser.add_argument("--stealth", action="store_true",
                         help="Create local ignored projections without tracked Git changes.")
@@ -446,7 +446,8 @@ def command_init(argv):
 def init_normal(target, install_precommit=False):
     ai_dst = os.path.join(target, ".ai")
     if os.path.exists(ai_dst):
-        eprint("ERROR: %s already exists. Use agentic-config sync/check/doctor there." % ai_dst)
+        eprint("ERROR: %s already exists. Use %s sync/check/doctor there." %
+               (ai_dst, command_name()))
         return 1
 
     try:
@@ -473,20 +474,20 @@ def init_normal(target, install_precommit=False):
     if rc:
         print("")
         print("Initial sync stopped before overwriting existing native IDE config.")
-        print("Run: agentic-config doctor")
+        print("Run: %s doctor" % command_name())
         return rc
     if install_precommit:
         install_hook(target)
     print("")
     print("Ready. Edit .ai/ or ask your IDE for /agentic-config.")
-    print("Verify with: agentic-config check")
+    print("Verify with: %s check" % command_name())
     return 0
 
 
 def init_stealth(target):
     root = git_root(target)
     if not root:
-        eprint("ERROR: agentic-config init --stealth requires a Git repository.")
+        eprint("ERROR: %s init --stealth requires a Git repository." % command_name())
         eprint("Stealth mode uses .git/info/exclude so it can avoid tracked repo changes.")
         return 1
 
@@ -529,7 +530,7 @@ def init_stealth(target):
     if rc:
         print("")
         print("Stealth init stopped before writing unsafe output.")
-        print("Run: agentic-config doctor")
+        print("Run: %s doctor" % command_name())
         return rc
     print("")
     print("Stealth setup complete. Local IDE projections are ignored by Git.")
@@ -565,7 +566,7 @@ def discover_config(start):
 def proxy(cmd, rest):
     repo, ai_dir, stealth = discover_config(os.getcwd())
     if not repo:
-        eprint("ERROR: no Agentic Config Kit source found.")
+        eprint("ERROR: no Agentic Config source found.")
         eprint("Run `%s init` or `%s init --stealth` first." %
                (command_name(), command_name()))
         return 1
@@ -654,7 +655,7 @@ def uninstall_action(path, dry_run, description, directory=False):
 def command_uninstall(argv, command):
     parser = argparse.ArgumentParser(
         prog="%s uninstall" % command,
-        description="Remove the user-level Agentic Config Kit CLI install.")
+        description="Remove the user-level Agentic Config CLI install.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print what would be removed without deleting anything.")
     args = parser.parse_args(argv)
@@ -663,11 +664,11 @@ def command_uninstall(argv, command):
     bin_dir = default_bin_dir()
     had_error = False
 
-    print("Agentic Config Kit uninstall")
+    print("Agentic Config uninstall")
     print("  kit: %s" % install_dir)
     print("  bin: %s" % bin_dir)
 
-    for name in ["agentic-config", "agc"]:
+    for name in ["agentic", "agentic-config", "agc"]:
         path = os.path.join(bin_dir, name)
         if not os.path.exists(path) and not os.path.islink(path):
             print("Skipped missing command: %s" % path)
@@ -675,13 +676,13 @@ def command_uninstall(argv, command):
         if managed_cli_entry(path, install_dir):
             uninstall_action(path, args.dry_run, "command")
         else:
-            print("Skipped non-ACK command: %s" % path)
+            print("Skipped non-Agentic Config command: %s" % path)
 
     if os.path.exists(install_dir):
         if install_dir_looks_managed(install_dir):
             uninstall_action(install_dir, args.dry_run, "kit directory", directory=True)
         else:
-            eprint("ERROR: refusing to remove install dir that does not look ACK-managed: %s" %
+            eprint("ERROR: refusing to remove install dir that does not look Agentic Config-managed: %s" %
                    install_dir)
             had_error = True
     else:
@@ -698,7 +699,7 @@ def command_uninstall(argv, command):
 def command_update(argv, command):
     parser = argparse.ArgumentParser(
         prog="%s update" % command,
-        description="Check for or install Agentic Config Kit updates.")
+        description="Check for or install Agentic Config updates.")
     parser.add_argument("--check", action="store_true",
                         help="Check for an update without installing it.")
     parser.add_argument("--force", action="store_true",
@@ -720,7 +721,7 @@ def command_update(argv, command):
         else:
             release = latest_release(timeout=15)
     except Exception as e:
-        eprint("ERROR: could not check for Agentic Config Kit updates: %s" % e)
+        eprint("ERROR: could not check for Agentic Config updates: %s" % e)
         return 1
 
     latest = release.get("version") or release.get("tag")
@@ -734,16 +735,16 @@ def command_update(argv, command):
             if release.get("url"):
                 print("Release: %s" % release["url"])
         else:
-            print("Agentic Config Kit is up to date (%s)." % current)
+            print("Agentic Config is up to date (%s)." % current)
         return 0
 
     explicit_version = bool(args.target_version)
     if not newer and not args.force and not explicit_version:
-        print("Agentic Config Kit is up to date (%s)." % current)
+        print("Agentic Config is up to date (%s)." % current)
         return 0
 
     archive_url = os.environ.get("AGENTIC_CONFIG_ARCHIVE_URL") or release["archive_url"]
-    print("Updating Agentic Config Kit: %s -> %s" % (current, latest))
+    print("Updating Agentic Config: %s -> %s" % (current, latest))
     if release.get("url"):
         print("Release: %s" % release["url"])
     return install_update(archive_url)
@@ -751,7 +752,7 @@ def command_update(argv, command):
 
 def print_help():
     cmd = command_name()
-    print("""Agentic Config Kit
+    print("""Agentic Config
 
 Usage:
   {cmd} init [--stealth] [--install-hook] [path]
@@ -772,7 +773,8 @@ Usage:
 
 Normal init creates repo-local `.ai/` source and source-only ignore rules.
 Stealth init creates local ignored `.agentic-config/.ai/` source with no tracked Git changes.
-`agc` is installed as a short alias for `agentic-config`.
+`agentic` is the primary CLI. `agentic-config` is a compatibility command;
+`agc` is a legacy alias when available.
 """.format(cmd=cmd).rstrip())
 
 

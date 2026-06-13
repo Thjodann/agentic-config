@@ -33,17 +33,17 @@ agentic IDE they use.
 ## Commands
 
 ```bash
-agentic-config sync
-agentic-config check
-agentic-config doctor
-agentic-config bootstrap
-agentic-config adopt cursor .cursor/rules/my-rule.mdc
-agentic-config adopt --all
-agentic-config reconcile --all-exact
-agentic-config demote cursor .cursor/commands/my-command.md
-agentic-config promote cursor .cursor/commands/my-command.md
-agentic-config clean
-agentic-config clean --native-duplicates
+agentic sync
+agentic check
+agentic doctor
+agentic bootstrap
+agentic adopt cursor .cursor/rules/my-rule.mdc
+agentic adopt --all
+agentic reconcile --all-exact
+agentic demote cursor .cursor/commands/my-command.md
+agentic promote cursor .cursor/commands/my-command.md
+agentic clean
+agentic clean --native-duplicates
 
 ./sync-agentic.sh
 ./sync-agentic.sh sync
@@ -65,8 +65,8 @@ agentic-config clean --native-duplicates
 ./sync-agentic.sh bootstrap
 ```
 
-`agentic-config` is the preferred interface. `./sync-agentic.sh` remains the
-repo-local compatibility wrapper. `doctor` reports native-only assets, stale
+`agentic` is the preferred interface. `agentic-config` and `./sync-agentic.sh`
+remain compatibility entrypoints. `doctor` reports native-only assets, stale
 generated files, canonical conflicts, and known degradations. `adopt` promotes
 native IDE files into `.ai/`; `reconcile` canonicalizes exact duplicate native
 assets; `demote` suppresses one generated path for one consumer IDE; `promote`
@@ -156,9 +156,9 @@ guidance. `doctor` flags them as Codex-only instead of adopting them as team rul
 ## Native Contribution Workflow
 
 1. Create the asset in your IDE.
-2. Run `agentic-config doctor`.
+2. Run `agentic doctor`.
 3. Adopt the native file into `.ai/`.
-4. Run `agentic-config sync`.
+4. Run `agentic sync`.
 5. Commit `.ai/`, `.ai/.manifest.json`, root `AGENTS.md`, and toolkit files. In
    source-only mode, leave generated IDE folders ignored.
 
@@ -169,10 +169,10 @@ the repo source.
 Examples:
 
 ```bash
-agentic-config adopt cursor .cursor/rules/service-style.mdc
-agentic-config adopt windsurf .windsurf/workflows/release-check.md
-agentic-config adopt codex .codex/agents/reviewer.toml
-agentic-config sync
+agentic adopt cursor .cursor/rules/service-style.mdc
+agentic adopt windsurf .windsurf/workflows/release-check.md
+agentic adopt codex .codex/agents/reviewer.toml
+agentic sync
 ```
 
 ## Source-Only Workflow
@@ -182,16 +182,16 @@ Generated IDE folders are local projections and may be ignored by Git. Commit `.
 developer can run this after cloning:
 
 ```bash
-agentic-config bootstrap
+agentic bootstrap
 ```
 
 If several teammates created the same native skill/rule/command/agent before adopting
 it, use:
 
 ```bash
-agentic-config doctor
-agentic-config reconcile --all-exact
-agentic-config sync
+agentic doctor
+agentic reconcile --all-exact
+agentic sync
 ```
 
 `doctor` never changes files. `reconcile` only auto-merges exact normalized duplicates.
@@ -204,9 +204,9 @@ If Cursor surfaces multiple generated projections for the same concept, use an
 explicit demotion:
 
 ```bash
-agentic-config doctor
-agentic-config demote cursor .cursor/commands/debug-word.md
-agentic-config check
+agentic doctor
+agentic demote cursor .cursor/commands/debug-word.md
+agentic check
 ```
 
 Demotions are stored in `.ai/.demotions.json`, or `.agentic-config/.ai/.demotions.json`
@@ -221,7 +221,7 @@ canonical asset from `.ai/` and rerunning sync prunes only files or managed bloc
 still look like this tool's output. Markerless human files at generated paths are
 reported instead of overwritten or deleted.
 
-`agentic-config clean` removes generated IDE projection files listed in the manifest
+`agentic clean` removes generated IDE projection files listed in the manifest
 while keeping `.ai/` and root `AGENTS.md`. It refuses markerless files whose bytes no
 longer match the manifest hash. Add `--native-duplicates` only when you want to remove
 unmanaged repo-native files that exactly match canonical assets. Global user-level

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Legacy installer for putting Agentic Config Kit into a target repository.
+# Legacy installer for putting Agentic Config into a target repository.
 #
 #   ./install.sh [target-repo-dir]   (default: current directory)
 #
 # Prefer the global CLI when available:
 #
-#   agentic-config init [target-repo-dir]
+#   agentic init [target-repo-dir]
 #
 # This fallback copies the canonical .ai/ master + ./sync-agentic.sh into the
 # target repo, runs an initial sync, and offers to install the pre-commit
@@ -16,7 +16,7 @@ KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET="${1:-.}"
 TARGET="$(cd "$TARGET" && pwd)"
 
-echo "Agentic Config Kit → installing into: $TARGET"
+echo "Agentic Config → installing into: $TARGET"
 
 # --- preconditions ---
 command -v python3 >/dev/null 2>&1 || { echo "❌ python3 is required (3.6+)."; exit 1; }
@@ -93,5 +93,5 @@ fi
 
 echo ""
 echo "🎉 Done. Edit assets in $TARGET/.ai/, then run ./sync-agentic.sh."
-echo "   With the global CLI installed, you can also run: agentic-config sync"
+echo "   With the global CLI installed, you can also run: agentic sync"
 echo "   Docs: $TARGET/.ai/README.md"

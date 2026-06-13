@@ -1,7 +1,7 @@
-# Agent- and OS-Agnostic ACK Update Runbook
+# Agent- and OS-Agnostic Agentic Config Update Runbook
 
 Use this runbook when a user asks an agentic IDE or coding assistant to install,
-update, or verify Agentic Config Kit for a repository. It is intentionally
+update, or verify Agentic Config for a repository. It is intentionally
 model-agnostic and operating-system-agnostic: adapt command syntax to the user's
 shell, but preserve the same decisions, safety checks, and verification order.
 
@@ -25,15 +25,15 @@ Prefer a stronger model or a more capable agent when:
 
 ## Goal
 
-Bring the user's Agentic Config Kit installation and target repository setup up to
-the selected ACK source, without accidentally copying dirty local work or changing
+Bring the user's Agentic Config installation and target repository setup up to
+the selected source, without accidentally copying dirty local work or changing
 tracked repo files when the install is stealth.
 
 Successful completion means:
 
-- the source kit comes from a stable GitHub Release, committed remote ref, clean
+- the source checkout comes from a stable GitHub Release, committed remote ref, clean
   tag, or explicitly approved clean local checkout;
-- the user-level `agentic-config` and `agc` CLIs plus bundled templates match that
+- the user-level `agentic` and `agentic-config` CLIs plus bundled templates match that
   source;
 - the target repo's canonical config is updated in the right location;
 - generated projections are regenerated and verified;
@@ -44,12 +44,12 @@ Successful completion means:
 
 - Treat shell syntax as replaceable and process order as fixed.
 - Prefer stable GitHub Releases for reproducible installs and updates.
-- Use `agc` when available. Use `agentic-config` when `agc` is unavailable or when
-  explicit naming is clearer. They are equivalent ACK entrypoints.
-- In command examples, `<ack>` means the one ACK command chosen for this run.
+- Use `agentic` when available. Use `agentic-config` when `agentic` is unavailable or when
+  explicit naming is clearer. They are equivalent Agentic Config entrypoints.
+- In command examples, `<agentic-cmd>` means the one Agentic Config command chosen for this run.
   Pick it once, then use it consistently so real command failures are not hidden
   by retrying through an alias.
-- Never run angle-bracket placeholders literally. Replace values such as `<ack>`,
+- Never run angle-bracket placeholders literally. Replace values such as `<agentic-cmd>`,
   `<kit-source>`, `<target-repo>`, and `<temp-dir>` before executing a command.
 - Use absolute paths for target repos, temp dirs, and local kit checkouts.
 - If a command fails only because the shell syntax is wrong, translate it for the
@@ -65,9 +65,9 @@ The examples below use POSIX shell syntax. Translate only the shell mechanics wh
 running elsewhere:
 
 - Command exists:
-  - POSIX: `command -v agc` or `command -v agentic-config`
-  - PowerShell: `Get-Command agc -ErrorAction SilentlyContinue`
-  - Windows cmd: `where agc`
+  - POSIX: `command -v agentic` or `command -v agentic-config`
+  - PowerShell: `Get-Command agentic -ErrorAction SilentlyContinue`
+  - Windows cmd: `where agentic`
 - One-command environment variable:
   - POSIX: `NAME=value command`
   - PowerShell: `$env:NAME = "value"; command; Remove-Item Env:NAME`
@@ -133,20 +133,20 @@ In the target repo:
 ```bash
 git status --short --branch
 git rev-parse --show-toplevel
-command -v agc
+command -v agentic
 command -v agentic-config
 ```
 
 Treat a missing command as information, not as a workflow failure.
 
-If neither `agc` nor `agentic-config` is installed, install the user-level CLI in
-Step 4 before running repo-level ACK commands. If either command exists, choose
-one as `<ack>` and run:
+If neither `agentic` nor `agentic-config` is installed, install the user-level CLI in
+Step 4 before running repo-level Agentic Config commands. If either command exists, choose
+one as `<agentic-cmd>` and run:
 
 ```bash
-<ack> --version
-<ack> doctor
-<ack> check
+<agentic-cmd> --version
+<agentic-cmd> doctor
+<agentic-cmd> check
 ```
 
 Find the canonical source:
@@ -163,7 +163,7 @@ Interpretation:
 - `.ai/` exists: update the repo's committed canonical source.
 - `.agentic-config/.ai/` exists: update the local stealth canonical source.
 - both exist: report both and ask which source should be canonical before editing.
-- neither exists: initialize with `agc init` or `agc init --stealth` according to
+- neither exists: initialize with `agentic init` or `agentic init --stealth` according to
   the user's requested mode.
 
 ## Step 2: Select A Reproducible Kit Source
@@ -171,13 +171,13 @@ Interpretation:
 Default to the latest stable GitHub Release:
 
 ```bash
-<ack> update --check
+<agentic-cmd> update --check
 ```
 
 If the user asked for a specific release:
 
 ```bash
-<ack> update --check --version v0.1.0
+<agentic-cmd> update --check --version v0.1.0
 ```
 
 If the CLI is not installed yet, the installer resolves the latest stable release:
@@ -238,20 +238,20 @@ tests were unavailable and continue only after the syntax checks pass.
 
 ## Step 4: Update The User-Level CLI
 
-When the user wants the installed CLI updated and ACK is already installed, use
+When the user wants the installed CLI updated and Agentic Config is already installed, use
 the release-aware self-update:
 
 ```bash
-<ack> update
+<agentic-cmd> update
 ```
 
 For a specific release:
 
 ```bash
-<ack> update --version v0.1.0
+<agentic-cmd> update --version v0.1.0
 ```
 
-If ACK is not installed, install the latest stable release:
+If Agentic Config is not installed, install the latest stable release:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
@@ -267,26 +267,26 @@ AGENTIC_CONFIG_SOURCE_DIR=<clean-kit-source> sh <clean-kit-source>/install-agent
 Then verify the installed entrypoints:
 
 ```bash
+agentic --version
 agentic-config --version
-agc --version
+agentic --help
 agentic-config --help
-agc --help
 ```
 
 If the user requests a clean reinstall, preview the uninstall first:
 
 ```bash
-agc uninstall --dry-run
+agentic uninstall --dry-run
 ```
 
-Then run `agc uninstall` before the install step, or use the standalone
+Then run `agentic uninstall` before the install step, or use the standalone
 uninstaller when the installed command is unavailable:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/uninstall-agentic-config.sh | sh
 ```
 
-Uninstall removes only the user-level ACK CLI install and bundled kit directory;
+Uninstall removes only the user-level Agentic Config CLI install and bundled kit directory;
 it does not clean initialized repo config or global IDE assets.
 
 If a custom `AGENTIC_CONFIG_HOME` was used, verify that directory. Otherwise the
@@ -338,9 +338,9 @@ after confirming they are kit-owned and not repo-specific.
 Run:
 
 ```bash
-<ack> sync
-<ack> check
-<ack> doctor
+<agentic-cmd> sync
+<agentic-cmd> check
+<agentic-cmd> doctor
 ```
 
 Commit only the intended source files and tracked managed files.
@@ -362,9 +362,9 @@ cp <kit-source>/.ai/skills/agentic-config-maintainer/agents/openai.yaml .agentic
 Then run:
 
 ```bash
-<ack> sync
-<ack> check
-<ack> doctor
+<agentic-cmd> sync
+<agentic-cmd> check
+<agentic-cmd> doctor
 ```
 
 Expected stealth behavior:
@@ -440,7 +440,7 @@ For stealth installs, explicitly say whether tracked repo files changed.
 Paste this into any agentic IDE when asking a model to perform the workflow:
 
 ```text
-Please update this repo's Agentic Config Kit setup in a model- and OS-agnostic
+Please update this repo's Agentic Config setup in a model- and OS-agnostic
 way. Use the runbook's process order exactly, but translate shell syntax for this
 environment when needed.
 
@@ -448,7 +448,7 @@ Prefer the latest stable GitHub Release. Do not install from a dirty working tre
 unless I explicitly say those changes are in scope. Detect whether this target
 repo uses normal `.ai/` or stealth `.agentic-config/.ai/`. Preserve repo-specific
 assets. Update only kit-owned engine/docs/helper assets, then run sync, check, and
-doctor with `agc` or `agentic-config`, whichever is available.
+doctor with `agentic` or `agentic-config`, whichever is available.
 
 If this is a stealth install, do not edit `.gitignore` or tracked generated files.
 Report expected degraded mappings, global overlaps, Cursor-visible overlaps, and
