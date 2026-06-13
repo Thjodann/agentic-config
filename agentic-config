@@ -61,7 +61,7 @@ LOCAL_EXCLUDE = [
 ]
 
 PROXY_COMMANDS = {
-    "sync", "check", "doctor", "bootstrap", "adopt", "reconcile",
+    "sync", "check", "doctor", "status", "bootstrap", "adopt", "reconcile",
     "demote", "promote", "clean",
 }
 
@@ -516,7 +516,7 @@ def init_normal(target, install_precommit=False):
         install_hook(target)
     print("")
     print("Ready. Edit .ai/ or ask your IDE for /agentic-config.")
-    print("Verify with: %s check" % command_name())
+    print("Verify with: %s status" % command_name())
     return 0
 
 
@@ -576,6 +576,8 @@ def init_stealth(target):
 
 def discover_config(start):
     cur = os.path.abspath(start)
+    root = git_root(cur)
+    stop_at = os.path.abspath(root) if root else None
     while True:
         normal = os.path.join(cur, ".ai", "sync.py")
         stealth = os.path.join(cur, ".agentic-config", ".ai", "sync.py")
@@ -583,19 +585,13 @@ def discover_config(start):
             return cur, os.path.join(cur, ".ai"), False
         if os.path.isfile(stealth):
             return cur, os.path.join(cur, ".agentic-config", ".ai"), True
+        if stop_at and cur == stop_at:
+            break
         parent = os.path.dirname(cur)
         if parent == cur:
             break
         cur = parent
 
-    root = git_root(start)
-    if root:
-        normal = os.path.join(root, ".ai", "sync.py")
-        stealth = os.path.join(root, ".agentic-config", ".ai", "sync.py")
-        if os.path.isfile(normal):
-            return root, os.path.join(root, ".ai"), False
-        if os.path.isfile(stealth):
-            return root, os.path.join(root, ".agentic-config", ".ai"), True
     return None, None, False
 
 
@@ -607,6 +603,92 @@ def proxy(cmd, rest):
                (command_name(), command_name()))
         return 1
     return run_sync(repo, ai_dir, [cmd] + rest, stealth=stealth)
+
+
+def command_setup(argv):
+    parser = argparse.ArgumentParser(
+        prog="%s setup" % command_name(),
+        description="Set up or bootstrap Agentic Config in a repository.")
+    parser.add_argument("path", nargs="?", default=".")
+    parser.add_argument("--stealth", action="store_true",
+                        help="Create local ignored projections without tracked Git changes.")
+    parser.add_argument("--install-hook", action="store_true",
+                        help="Install the optional pre-commit guard when initializing normal mode.")
+    args = parser.parse_args(argv)
+
+    target = os.path.abspath(args.path)
+    if not os.path.isdir(target):
+        eprint("ERROR: target does not exist or is not a directory: %s" % target)
+        return 1
+
+    repo, ai_dir, stealth = discover_config(target)
+    if repo:
+        mode = "stealth" if stealth else "normal"
+        print("Using existing %s Agentic Config source: %s" % (mode, ai_dir))
+        rc = run_sync(repo, ai_dir, ["bootstrap"], stealth=stealth)
+        if rc:
+            return rc
+        print("")
+        return run_sync(repo, ai_dir, ["status"], stealth=stealth)
+
+    if args.stealth:
+        return init_stealth(target)
+    return init_normal(target, install_precommit=args.install_hook)
+
+
+def infer_ide_from_path(path):
+    normalized = str(path).replace(os.sep, "/")
+    parts = [p for p in normalized.split("/") if p]
+    if ".cursor" in parts:
+        return "cursor"
+    if ".windsurf" in parts or ".devin" in parts:
+        return "windsurf"
+    if ".agents" in parts or ".codex" in parts:
+        return "codex"
+    if ".claude" in parts:
+        return "claude"
+    if ".continue" in parts:
+        return "continue"
+    return None
+
+
+def run_status_after_import(import_rc):
+    print("")
+    print("Import status:")
+    sys.stdout.flush()
+    status_rc = proxy("status", [])
+    return import_rc if import_rc else status_rc
+
+
+def command_import(argv):
+    parser = argparse.ArgumentParser(
+        prog="%s import" % command_name(),
+        description="Import native AI tool files into Agentic Config.")
+    parser.add_argument("path", nargs="?")
+    parser.add_argument("--all", action="store_true",
+                        help="Import every unambiguous repo-native asset.")
+    parser.add_argument("--exact-duplicates", action="store_true",
+                        help="Reconcile all exact duplicate native groups.")
+    args = parser.parse_args(argv)
+
+    selected = sum(1 for value in [args.path, args.all, args.exact_duplicates] if value)
+    if selected > 1:
+        eprint("ERROR: choose one import target: a path, --all, or --exact-duplicates")
+        return 1
+
+    if args.exact_duplicates:
+        return run_status_after_import(proxy("reconcile", ["--all-exact"]))
+    if args.path:
+        ide = infer_ide_from_path(args.path)
+        if not ide:
+            eprint("ERROR: could not infer IDE from path: %s" % args.path)
+            eprint("Use `%s adopt <ide> <path>` for advanced imports." % command_name())
+            return 1
+        return run_status_after_import(proxy("adopt", [ide, args.path]))
+
+    # Plain `agentic import` is intentionally useful: import everything safe and
+    # let status explain whether conflicts still block sync.
+    return run_status_after_import(proxy("adopt", ["--all"]))
 
 
 def install_update(archive_url):
@@ -793,22 +875,29 @@ def print_help():
     cmd = command_name()
     print("""Agentic Config
 
-Usage:
+Common commands:
+  {cmd} setup [--stealth] [path]        Set up or bootstrap this repo
+  {cmd} status [--verbose]              Show health, blockers, and next step
+  {cmd} sync                            Regenerate IDE files from .ai/
+  {cmd} import [path|--all]             Import native AI tool files into .ai/
+  {cmd} clean [--native-duplicates]     Remove generated/local duplicate files
+
+Maintenance:
+  {cmd} update [--check] [--force] [--version <tag>]
+  {cmd} uninstall [--dry-run]
+  {cmd} version
+
+Advanced:
   {cmd} init [--stealth] [--install-hook] [path]
-  {cmd} sync
+  {cmd} bootstrap
   {cmd} check
   {cmd} doctor [--staged]
-  {cmd} bootstrap
   {cmd} adopt <ide> <path>
   {cmd} adopt --all
   {cmd} reconcile <kind> <name>
   {cmd} reconcile --all-exact
   {cmd} demote <consumer-ide> <generated-path>
   {cmd} promote <consumer-ide> <generated-path>
-  {cmd} clean [--native-duplicates]
-  {cmd} update [--check] [--force] [--version <tag>]
-  {cmd} uninstall [--dry-run]
-  {cmd} version
 
 Normal init creates repo-local `.ai/` source and source-only ignore rules.
 Stealth init creates local ignored `.agentic-config/.ai/` source with no tracked Git changes.
@@ -827,7 +916,11 @@ def main(argv=None):
     if cmd in ("-V", "--version", "version"):
         print("%s %s" % (cmd_name, current_version()))
         return 0
-    if cmd == "init":
+    if cmd == "setup":
+        rc = command_setup(argv[1:])
+    elif cmd == "import":
+        rc = command_import(argv[1:])
+    elif cmd == "init":
         rc = command_init(argv[1:])
     elif cmd == "update":
         return command_update(argv[1:], cmd_name)

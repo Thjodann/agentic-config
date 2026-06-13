@@ -1038,7 +1038,7 @@ def assert_safe_file_mutation(rel, old_entry, action, represented=None):
         return
     raise SafetyError(
         "refusing to %s markerless file at generated path %s. "
-        "Run %s doctor and adopt/reconcile it first, or remove it manually." %
+        "Run %s status and resolve the Blocking item before syncing." %
         (action, rel, COMMAND_NAME))
 
 
@@ -1207,7 +1207,8 @@ def command_sync(check=False):
             print("Generated IDE folders are STALE vs %s master:" % AI_REL)
             for d in drift:
                 print("    %s" % d)
-            print("\nRun %s to regenerate local projections and refresh the manifest." % COMMAND_NAME)
+            print("\nRun %s sync to regenerate local projections and refresh the manifest." % COMMAND_NAME)
+            print("If sync is blocked, run %s status and resolve the Blocking items first." % COMMAND_NAME)
             print_stealth_skips()
             return 1
         print("In sync: %d generated entries match %s master." % (len(entries), AI_REL))
@@ -1220,6 +1221,9 @@ def command_sync(check=False):
             texts, copies, managed, entries, represented)
     except SafetyError as e:
         print("ERROR: %s" % e)
+        print("")
+        print("Sync is blocked by a markerless native file that Agentic Config will not overwrite.")
+        print("Run %s status to see blocking items and the next safe step." % COMMAND_NAME)
         return 1
     by_type = {}
     for asset in assets:
@@ -1862,8 +1866,8 @@ def command_adopt(args):
             if unresolved:
                 print(
                     "%d native asset(s) still need manual resolution; "
-                    "review them with: %s" %
-                    (len(unresolved), shell_command([COMMAND_NAME, "doctor"])))
+                    "review Blocking items before syncing with: %s" %
+                    (len(unresolved), shell_command([COMMAND_NAME, "status"])))
             return 0
         if not args.ide or not args.path:
             raise ValueError("usage: adopt <ide> <path> or adopt --all")
@@ -2001,6 +2005,153 @@ def command_doctor(args):
         state["drift"], state["native_only"], state["exact_groups"],
         conflicts, state["unsupported"], state["canonical_ide_prefixes"],
     ]) else 0
+
+
+def print_limited(items, limit=8):
+    shown = list(items[:limit])
+    for item in shown:
+        print("  %s" % item)
+    remaining = len(items) - len(shown)
+    if remaining > 0:
+        print("  ... and %d more" % remaining)
+
+
+def status_conflicts(state):
+    return state["canonical_conflicts"] + state["duplicate_conflicts"] + state["parse_errors"]
+
+
+def command_status(args):
+    if args.check:
+        return command_sync(check=True)
+
+    state = find_doctor_issues(False)
+    conflicts = status_conflicts(state)
+    canonical_blockers = state["canonical_conflicts"] + state["parse_errors"]
+    duplicate_blockers = state["duplicate_conflicts"]
+    repo_represented = [r for r in state["represented"] if r["scope"] == "repo"]
+    global_represented = [r for r in state["represented"] if r["scope"] == "global"]
+
+    blocking = []
+    if conflicts:
+        blocking.append("%d conflict(s) need a human decision." % len(conflicts))
+    if state["native_only"]:
+        blocking.append("%d native-only asset(s) can be imported." % len(state["native_only"]))
+    if state["exact_groups"]:
+        blocking.append("%d exact duplicate group(s) can be reconciled." % len(state["exact_groups"]))
+    if state["canonical_ide_prefixes"]:
+        blocking.append("%d canonical asset(s) use IDE-specific names." %
+                        len(state["canonical_ide_prefixes"]))
+
+    optional_count = (
+        len(state["unsupported"]) + len(state["cursor_visible_overlaps"]) +
+        len(state["degradations"]) + len(state["possible"]) +
+        len(state["global_shadowed"]) + len(state["global_canonical_conflicts"]) +
+        len(global_represented)
+    )
+
+    print("Agentic Config Status")
+    print("")
+    if blocking:
+        print("Blocking:")
+        for item in blocking:
+            print("  %s" % item)
+        if conflicts:
+            print("  Conflicts:")
+            print_limited(conflicts)
+        if state["native_only"]:
+            print("  Native-only assets:")
+            print_limited(["%s" % r["path"] for r in state["native_only"]])
+        if state["exact_groups"]:
+            print("  Exact duplicate groups:")
+            print_limited([
+                "%s %s" % (group[0]["asset"]["type"], group[0]["asset"]["name"])
+                for group in state["exact_groups"]
+            ])
+        print("")
+    else:
+        print("Blocking:")
+        print("  None")
+        print("")
+
+    if state["drift"]:
+        print("Needs update:")
+        print("  %d generated output(s) are stale." % len(state["drift"]))
+        print_limited(state["drift"])
+        print("")
+    else:
+        print("Needs update:")
+        print("  None")
+        print("")
+
+    if repo_represented:
+        print("Recommended cleanup:")
+        print("  %d native duplicate(s) are already represented in %s/." %
+              (len(repo_represented), AI_REL))
+        print("  Run: %s clean --native-duplicates" % COMMAND_NAME)
+        print("")
+    else:
+        print("Recommended cleanup:")
+        print("  None")
+        print("")
+
+    if optional_count:
+        print("Optional / informational:")
+        if state["unsupported"]:
+            print("  %d unsupported or Codex-only asset(s)." % len(state["unsupported"]))
+        if state["cursor_visible_overlaps"]:
+            print("  %d Cursor-visible overlap group(s)." %
+                  len(state["cursor_visible_overlaps"]))
+        if state["degradations"]:
+            print("  %d degraded mapping note(s)." % len(state["degradations"]))
+        if state["possible"]:
+            print("  %d possible duplicate content note(s)." % len(state["possible"]))
+        if state["global_shadowed"]:
+            print("  %d repo-native asset(s) are shadowed by global assets." %
+                  len(state["global_shadowed"]))
+        if state["global_canonical_conflicts"]:
+            print("  %d global native overlap(s)." %
+                  len(state["global_canonical_conflicts"]))
+        if global_represented:
+            print("  %d global native duplicate(s) are represented in %s/." %
+                  (len(global_represented), AI_REL))
+        print("  Run %s status --verbose for full details." % COMMAND_NAME)
+        print("")
+    else:
+        print("Optional / informational:")
+        print("  None")
+        print("")
+
+    print("Next step:")
+    if canonical_blockers:
+        print("  Resolve the conflicts above, then run %s sync." % COMMAND_NAME)
+    elif duplicate_blockers:
+        print("  Run %s import --all to import unambiguous assets." % COMMAND_NAME)
+        print("  Resolve any conflicts that remain, then run %s sync." % COMMAND_NAME)
+    elif state["exact_groups"]:
+        print("  Run %s import --exact-duplicates." % COMMAND_NAME)
+    elif state["native_only"]:
+        print("  Run %s import --all." % COMMAND_NAME)
+    elif state["canonical_ide_prefixes"]:
+        print("  Rename the IDE-specific canonical assets, then run %s sync." % COMMAND_NAME)
+    elif state["drift"]:
+        print("  Run %s sync." % COMMAND_NAME)
+    elif repo_represented:
+        print("  Optional: run %s clean --native-duplicates." % COMMAND_NAME)
+    elif optional_count:
+        print("  No blocking action. Review optional items only if they matter to your workflow.")
+    else:
+        print("  No action needed.")
+    print_stealth_skips()
+
+    if args.verbose:
+        print("")
+        print("Verbose doctor report:")
+        class DoctorArgs(object):
+            staged = False
+        command_doctor(DoctorArgs())
+        return 1 if blocking or state["drift"] else 0
+
+    return 1 if blocking or state["drift"] else 0
 
 
 def reconcile_group(group):
@@ -2254,6 +2405,11 @@ def main(argv=None):
         ap = argparse.ArgumentParser(prog="sync.py doctor")
         ap.add_argument("--staged", action="store_true")
         return command_doctor(ap.parse_args(argv[1:]))
+    if cmd == "status":
+        ap = argparse.ArgumentParser(prog="sync.py status")
+        ap.add_argument("--verbose", action="store_true")
+        ap.add_argument("--check", action="store_true")
+        return command_status(ap.parse_args(argv[1:]))
     if cmd == "adopt":
         ap = argparse.ArgumentParser(prog="sync.py adopt")
         ap.add_argument("ide", nargs="?")
