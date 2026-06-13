@@ -18,14 +18,18 @@ Bring a target repository up to the standard Agentic Config Kit setup:
 Prefer the CLI path:
 
 ```bash
-agentic-config init /path/to/target-repo
+agc init /path/to/target-repo
 ```
 
 Use stealth when the user wants no tracked Git changes:
 
 ```bash
-agentic-config init --stealth /path/to/target-repo
+agc init --stealth /path/to/target-repo
 ```
+
+`agentic-config` is the full command name and works everywhere `agc` is shown.
+The installer creates both entrypoints unless an unrelated `agc` command already
+exists.
 
 ## Inputs
 
@@ -79,22 +83,29 @@ Interpretation:
 Preferred:
 
 ```bash
-agentic-config init /path/to/target-repo
+agc init /path/to/target-repo
 ```
 
 To install the optional pre-commit guard:
 
 ```bash
-agentic-config init --install-hook /path/to/target-repo
+agc init --install-hook /path/to/target-repo
 ```
 
-If `agentic-config` is not installed yet, install it from this kit repo:
+If `agentic-config` or `agc` is not installed yet, install the latest stable
+GitHub Release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+```
+
+If working from this kit repo without network access:
 
 ```bash
 ./install-agentic-config.sh
 ```
 
-Fallback from this kit repo:
+Fallback from this kit repo for direct repo initialization:
 
 ```bash
 ./install.sh /path/to/target-repo
@@ -334,3 +345,56 @@ Use:
 If the tool reported skipped tracked paths, use normal init or manually adopt/resolve
 those files for full team-sharing fidelity.
 ```
+
+## Optional: Ask An Agent To Install ACK
+
+When curl is unavailable or the user wants an IDE agent to perform the setup, give
+the agent this exact prompt:
+
+```text
+Please install Agentic Config Kit in this repo.
+
+Runbook:
+https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/INSTALLER-RUNBOOK.md
+
+Prefer this install command:
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+
+Then initialize this repo with:
+agc init .
+
+Use stealth mode instead only if I ask for no tracked Git changes:
+agc init --stealth .
+```
+
+## Updating ACK
+
+ACK uses SemVer GitHub Release tags such as `v0.1.0`. Stable releases are the
+canonical install/update source; prereleases are ignored by default.
+
+Check the installed version:
+
+```bash
+agc --version
+```
+
+Check for updates:
+
+```bash
+agc update --check
+```
+
+Install the latest stable release:
+
+```bash
+agc update
+```
+
+Install a specific release:
+
+```bash
+agc update --version v0.1.0
+```
+
+Self-update refreshes the global CLI and bundled templates. It does not overwrite
+a target repo's initialized `.ai/` or `.agentic-config/.ai/` source.

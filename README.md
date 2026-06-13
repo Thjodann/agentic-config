@@ -13,6 +13,8 @@ and Continue** so no teammate is limited by their preferred agentic IDE.
 - **Multi-origin** - native IDE assets can be adopted or reconciled into `.ai/`.
 - **Global-aware** - `doctor` notices overlapping user-level assets in folders
   like `~/.cursor/` and `~/.codex/`.
+- **Release-updatable** - the global CLI installs from GitHub Releases and can
+  update itself without `git clone` or `git pull`.
 - **IDE-specific demotions** - suppress generated projections that are noisy in
   one IDE without deleting native or global assets.
 - **Deterministic** - `check` guards against stale committed output.
@@ -30,12 +32,13 @@ Install the CLI:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 ```
 
-From the repo you want to set up, choose one mode:
+This installs both `agentic-config` and the short `agc` alias. From the repo you
+want to set up, choose one mode:
 
 | Goal | Command | Canonical source |
 | --- | --- | --- |
-| Team-shared config committed to the repo | `agentic-config init .` | `.ai/` |
-| Local-only setup with no tracked Git changes | `agentic-config init --stealth .` | `.agentic-config/.ai/` |
+| Team-shared config committed to the repo | `agc init .` | `.ai/` |
+| Local-only setup with no tracked Git changes | `agc init --stealth .` | `.agentic-config/.ai/` |
 
 If the repo already has native IDE config such as `.cursor/`, `.windsurf/`, or
 `.codex/`, cleanly pull it into the canonical source:
@@ -59,8 +62,9 @@ After a source-only clone, regenerate local IDE projections:
 agentic-config bootstrap
 ```
 
-Prefer a model-driven setup? Ask your IDE's model to use `/agentic-config`, or
-paste the prompt in [Ask a model to set up or clean up a repo](#ask-a-model-to-set-up-or-clean-up-a-repo).
+Prefer a model-driven setup? Paste the prompt in
+[Ask a model to install ACK](#ask-a-model-to-install-ack), then ask your IDE's
+model to use `/agentic-config`.
 
 ## What's in this kit
 
@@ -107,6 +111,10 @@ Or via curl from the public repo:
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
 ```
 
+The curl command downloads the installer from `main`; the installer then resolves
+and installs the latest stable GitHub Release archive. Set
+`AGENTIC_CONFIG_ARCHIVE_URL` only for forks, tests, or offline fixtures.
+
 The installer copies the CLI and bundled templates to:
 
 ```text
@@ -120,15 +128,66 @@ ${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}
 ```
 
 If that bin directory is not on `PATH`, the installer prints the export line to
-add. The command is intentionally `agentic-config` in v1 so it does not collide
-with other tools named `ai`.
+add. The installer creates two entrypoints:
+
+```text
+agentic-config
+agc
+```
+
+`agentic-config` is the explicit command. `agc` is the short alias used in quick
+start examples. If a non-ACK `agc` command already exists, the installer leaves it
+alone and prints a warning.
+
+## Versioning and updates
+
+ACK uses SemVer release tags:
+
+```text
+vMAJOR.MINOR.PATCH
+```
+
+The first release is `v0.1.0`. Stable GitHub Releases are the canonical install
+and update source; prereleases are ignored by default.
+
+Check the installed version:
+
+```bash
+agc --version
+agentic-config version
+```
+
+Update the global CLI and bundled templates:
+
+```bash
+agc update
+```
+
+Check without installing:
+
+```bash
+agc update --check
+```
+
+Install a specific release:
+
+```bash
+agc update --version v0.1.0
+```
+
+The CLI checks for updates automatically when it is run interactively. Checks are
+cached for one day. Disable automatic checks with:
+
+```bash
+export AGENTIC_CONFIG_NO_UPDATE_CHECK=1
+```
 
 ## Initialize a project
 
 Preferred path:
 
 ```bash
-agentic-config init /path/to/your/repo
+agc init /path/to/your/repo
 ```
 
 This copies `.ai/` and `sync-agentic.sh` into the target repo, adds source-only
@@ -138,7 +197,7 @@ overwrite an existing `.ai/`.
 Optional pre-commit guard:
 
 ```bash
-agentic-config init --install-hook /path/to/your/repo
+agc init --install-hook /path/to/your/repo
 ```
 
 Backward-compatible fallback from this checkout:
@@ -163,7 +222,7 @@ Use stealth mode when you want local IDE commands/skills/rules without creating
 tracked repo changes:
 
 ```bash
-agentic-config init --stealth /path/to/your/repo
+agc init --stealth /path/to/your/repo
 ```
 
 Stealth means **no Git changes**, not no files. It requires a Git repo, then:
@@ -212,6 +271,27 @@ In Codex, generated manual commands are explicit-only skills and display with a
 
 Use direct CLI commands when you are scripting, debugging CI, or want exact control.
 Use the installed skill for everyday team contributions.
+
+## Ask a model to install ACK
+
+If curl is unavailable, blocked, or you simply want your IDE's agent to drive the
+setup, paste this prompt:
+
+```text
+Please install Agentic Config Kit in this repo.
+
+Runbook:
+https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/INSTALLER-RUNBOOK.md
+
+Prefer this install command:
+curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh
+
+Then initialize this repo with:
+agc init .
+
+Use stealth mode instead only if I ask for no tracked Git changes:
+agc init --stealth .
+```
 
 ## Ask a model to set up or clean up a repo
 

@@ -1,9 +1,14 @@
+import importlib.machinery
+import importlib.util
+import io
+import json
 import os
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import unittest
 
 
@@ -21,6 +26,15 @@ MAINTAINER_COMMAND_SRC = os.path.join(
     ROOT, ".ai", "commands", "agentic-config.md")
 
 
+def load_cli_module():
+    loader = importlib.machinery.SourceFileLoader(
+        "agentic_config_cli", CLI_SRC)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
 def write(path, content):
     parent = os.path.dirname(path)
     if parent:
@@ -32,6 +46,43 @@ def write(path, content):
 def read(path):
     with open(path, encoding="utf-8") as f:
         return f.read()
+
+
+def add_text_to_tar(tar, arcname, content):
+    data = content.encode("utf-8")
+    info = tarfile.TarInfo(arcname)
+    info.size = len(data)
+    tar.addfile(info, io.BytesIO(data))
+
+
+class VersionUpdateTests(unittest.TestCase):
+    def test_semver_parse_and_compare(self):
+        cli = load_cli_module()
+        self.assertEqual((0, 1, 0, []), cli.parse_semver("v0.1.0"))
+        self.assertEqual((1, 2, 3, ["alpha", "1"]),
+                         cli.parse_semver("1.2.3-alpha.1"))
+        self.assertTrue(cli.is_newer_version("v0.2.0", "0.1.9"))
+        self.assertTrue(cli.is_newer_version("1.0.0", "1.0.0-rc.1"))
+        self.assertFalse(cli.is_newer_version("1.0.0-rc.1", "1.0.0"))
+
+    def test_release_selection_ignores_prereleases_and_drafts(self):
+        cli = load_cli_module()
+        release = cli.select_release([
+            {"tag_name": "v0.3.0-rc.1", "prerelease": True},
+            {"tag_name": "v0.2.0", "draft": True},
+            {"tag_name": "v0.1.1", "html_url": "https://example.test/v0.1.1"},
+        ])
+        self.assertEqual("v0.1.1", release["tag_name"])
+
+    def test_docs_include_curl_and_agent_install_prompt(self):
+        readme = read(os.path.join(ROOT, "README.md"))
+        self.assertIn(
+            "curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/install-agentic-config.sh | sh",
+            readme)
+        self.assertIn(
+            "https://raw.githubusercontent.com/Thjodann/agentic-config-kit/main/INSTALLER-RUNBOOK.md",
+            readme)
+        self.assertIn("agc init --stealth .", readme)
 
 
 class SyncRepo(unittest.TestCase):
@@ -664,6 +715,7 @@ class CliTests(unittest.TestCase):
             tempfile.gettempdir(), os.path.basename(self.tmp) + "-pycache")
         self.env["PYTHONDONTWRITEBYTECODE"] = "1"
         self.env["AGENTIC_CONFIG_KIT_DIR"] = ROOT
+        self.env["AGENTIC_CONFIG_NO_UPDATE_CHECK"] = "1"
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -706,6 +758,30 @@ class CliTests(unittest.TestCase):
     def commit_all(self, message="seed"):
         self.git("add", ".")
         self.git("commit", "-m", message)
+
+    def make_release_archive(self, version="0.2.0"):
+        archive_path = self.path("agentic-config-kit-%s.tar.gz" % version)
+        archive_root = "agentic-config-kit-v%s" % version
+        with tarfile.open(archive_path, "w:gz") as tar:
+            for rel in [
+                ".ai",
+                "hooks",
+                "assets",
+                "agentic-config",
+                "sync-agentic.sh",
+                "install.sh",
+                "install-agentic-config.sh",
+                "README.md",
+                "INSTALLER-RUNBOOK.md",
+                "CHANGELOG.md",
+                ".gitignore",
+            ]:
+                src = os.path.join(ROOT, rel)
+                if os.path.exists(src):
+                    tar.add(src, arcname=os.path.join(archive_root, rel))
+            add_text_to_tar(
+                tar, os.path.join(archive_root, "VERSION"), "%s\n" % version)
+        return archive_path
 
     def test_agentic_config_init_creates_normal_setup_and_check_passes(self):
         self.init_git()
@@ -770,6 +846,60 @@ class CliTests(unittest.TestCase):
         check = self.run_cli("check")
         self.assertIn(".agentic-config/.ai master", check.stdout)
 
+    def test_agentic_config_version_reports_current_version(self):
+        result = self.run_cli("--version")
+        self.assertEqual("agentic-config 0.1.0", result.stdout.strip())
+
+    def test_update_check_reports_new_release(self):
+        release_path = self.path("latest-release.json")
+        write(release_path, json.dumps({
+            "tag_name": "v0.2.0",
+            "html_url": "https://example.test/releases/v0.2.0",
+            "prerelease": False,
+            "draft": False,
+        }))
+        self.env["AGENTIC_CONFIG_RELEASE_API_URL"] = "file://%s" % release_path
+
+        result = self.run_cli("update", "--check")
+        self.assertIn("Update available: 0.1.0 -> 0.2.0", result.stdout)
+        self.assertIn("Run: agentic-config update", result.stdout)
+
+    def test_cached_update_notice_uses_fresh_cache_without_network(self):
+        self.init_git()
+        cache_dir = self.path("cache")
+        os.makedirs(cache_dir)
+        write(os.path.join(cache_dir, "update-check.json"), json.dumps({
+            "checked_at": int(time.time()),
+            "latest": "0.2.0",
+            "tag": "v0.2.0",
+            "url": "https://example.test/releases/v0.2.0",
+        }))
+        self.env["AGENTIC_CONFIG_CACHE_DIR"] = cache_dir
+        self.env["AGENTIC_CONFIG_UPDATE_CHECK_ALWAYS"] = "1"
+        self.env["AGENTIC_CONFIG_RELEASE_API_URL"] = "file:///does-not-exist"
+        self.env.pop("AGENTIC_CONFIG_NO_UPDATE_CHECK", None)
+
+        result = self.run_cli("init", "--stealth", self.tmp)
+        self.assertIn("Agentic Config Kit update available: 0.1.0 -> 0.2.0",
+                      result.stdout)
+        self.assertIn("Run: agentic-config update", result.stdout)
+
+    def test_disabled_update_check_suppresses_cached_notice(self):
+        self.init_git()
+        cache_dir = self.path("cache")
+        os.makedirs(cache_dir)
+        write(os.path.join(cache_dir, "update-check.json"), json.dumps({
+            "checked_at": int(time.time()),
+            "latest": "0.2.0",
+            "tag": "v0.2.0",
+        }))
+        self.env["AGENTIC_CONFIG_CACHE_DIR"] = cache_dir
+        self.env["AGENTIC_CONFIG_UPDATE_CHECK_ALWAYS"] = "1"
+        self.env["AGENTIC_CONFIG_NO_UPDATE_CHECK"] = "1"
+
+        result = self.run_cli("init", "--stealth", self.tmp)
+        self.assertNotIn("update available", result.stdout)
+
     def test_proxy_uses_bundled_sync_engine_for_existing_stealth_repo(self):
         self.init_git()
         self.run_cli("init", "--stealth", self.tmp)
@@ -796,16 +926,51 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, result.returncode, result.stdout)
         installed_cli = os.path.join(install_bin, "agentic-config")
+        installed_agc = os.path.join(install_bin, "agc")
         self.assertTrue(os.path.exists(installed_cli))
+        self.assertTrue(os.path.exists(installed_agc))
+        installed_env = dict(self.env)
+        installed_env.pop("AGENTIC_CONFIG_KIT_DIR", None)
         help_result = subprocess.run(
             [installed_cli, "--help"],
             cwd=self.tmp,
-            env=self.env,
+            env=installed_env,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, help_result.returncode, help_result.stdout)
         self.assertIn("agentic-config init", help_result.stdout)
+        agc_result = subprocess.run(
+            [installed_agc, "--version"],
+            cwd=self.tmp,
+            env=installed_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, agc_result.returncode, agc_result.stdout)
+        self.assertEqual("agc 0.1.0", agc_result.stdout.strip())
+
+    def test_installer_does_not_overwrite_foreign_agc(self):
+        install_home = self.path("home", "share", "agentic-config-kit")
+        install_bin = self.path("home", "bin")
+        os.makedirs(install_bin)
+        foreign_agc = os.path.join(install_bin, "agc")
+        write(foreign_agc, "#!/bin/sh\necho foreign\n")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+
+        result = subprocess.run(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertIn("agc skipped", result.stdout)
+        self.assertEqual("#!/bin/sh\necho foreign\n", read(foreign_agc))
 
     def test_curl_pipe_installer_uses_extracted_archive_child(self):
         archive_path = self.path("agentic-config-kit-main.tar.gz")
@@ -821,6 +986,8 @@ class CliTests(unittest.TestCase):
                 "install-agentic-config.sh",
                 "README.md",
                 "INSTALLER-RUNBOOK.md",
+                "VERSION",
+                "CHANGELOG.md",
                 ".gitignore",
             ]:
                 src = os.path.join(ROOT, rel)
@@ -845,6 +1012,44 @@ class CliTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout)
         self.assertTrue(os.path.exists(os.path.join(install_home, ".ai", "sync.py")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic-config")))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agc")))
+
+    def test_update_installs_new_release_archive(self):
+        install_home = self.path("installed", "share", "agentic-config-kit")
+        install_bin = self.path("installed", "bin")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        result = subprocess.run(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+
+        archive_path = self.make_release_archive("0.2.0")
+        installed_env = dict(self.env)
+        installed_env.pop("AGENTIC_CONFIG_KIT_DIR", None)
+        installed_env.pop("AGENTIC_CONFIG_SOURCE_DIR", None)
+        installed_env["AGENTIC_CONFIG_HOME"] = install_home
+        installed_env["AGENTIC_CONFIG_BIN"] = install_bin
+        installed_env["AGENTIC_CONFIG_ARCHIVE_URL"] = "file://%s" % archive_path
+        installed_cli = os.path.join(install_bin, "agentic-config")
+
+        update = subprocess.run(
+            [installed_cli, "update", "--version", "v0.2.0"],
+            cwd=self.tmp,
+            env=installed_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, update.returncode, update.stdout)
+        self.assertIn("Updating Agentic Config Kit: 0.1.0 -> 0.2.0", update.stdout)
+        self.assertEqual("0.2.0\n", read(os.path.join(install_home, "VERSION")))
+        self.assertTrue(os.path.exists(os.path.join(install_bin, "agc")))
 
 
 class PreCommitTests(SyncRepo):

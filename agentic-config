@@ -7,15 +7,30 @@ this wrapper handles installation/init ergonomics and then delegates.
 """
 
 import argparse
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 
 
 KIT_DIR = os.path.dirname(os.path.realpath(__file__))
 if os.environ.get("AGENTIC_CONFIG_KIT_DIR"):
     KIT_DIR = os.path.abspath(os.environ["AGENTIC_CONFIG_KIT_DIR"])
+
+REPO_SLUG = "Thjodann/agentic-config-kit"
+GITHUB_BASE = "https://github.com/%s" % REPO_SLUG
+GITHUB_API_BASE = "https://api.github.com/repos/%s" % REPO_SLUG
+DEFAULT_RELEASE_API_URL = "%s/releases/latest" % GITHUB_API_BASE
+DEFAULT_RELEASE_ARCHIVE_BASE = "%s/archive/refs/tags" % GITHUB_BASE
+DEFAULT_VERSION = "0.1.0"
+UPDATE_CACHE_TTL_SECONDS = 24 * 60 * 60
+SEMVER_RE = re.compile(
+    r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$")
 
 GENERATED_IGNORE = [
     ".agentic-config/",
@@ -51,6 +66,238 @@ PROXY_COMMANDS = {
 
 def eprint(message):
     sys.stderr.write(message + "\n")
+
+
+def command_name():
+    name = os.path.basename(sys.argv[0] or "")
+    if name == "agc":
+        return "agc"
+    return "agentic-config"
+
+
+def version_file():
+    return os.path.join(KIT_DIR, "VERSION")
+
+
+def current_version():
+    try:
+        with open(version_file(), encoding="utf-8") as f:
+            value = f.read().strip()
+        return value or DEFAULT_VERSION
+    except OSError:
+        return DEFAULT_VERSION
+
+
+def parse_semver(value):
+    match = SEMVER_RE.match(str(value).strip())
+    if not match:
+        return None
+    prerelease = match.group(4)
+    return (
+        int(match.group(1)),
+        int(match.group(2)),
+        int(match.group(3)),
+        prerelease.split(".") if prerelease else [],
+    )
+
+
+def compare_prerelease(left, right):
+    if not left and not right:
+        return 0
+    if not left:
+        return 1
+    if not right:
+        return -1
+    for l_part, r_part in zip(left, right):
+        l_num = l_part.isdigit()
+        r_num = r_part.isdigit()
+        if l_num and r_num:
+            l_val = int(l_part)
+            r_val = int(r_part)
+            if l_val != r_val:
+                return 1 if l_val > r_val else -1
+            continue
+        if l_num != r_num:
+            return -1 if l_num else 1
+        if l_part != r_part:
+            return 1 if l_part > r_part else -1
+    if len(left) == len(right):
+        return 0
+    return 1 if len(left) > len(right) else -1
+
+
+def compare_semver(left, right):
+    left_parsed = parse_semver(left)
+    right_parsed = parse_semver(right)
+    if not left_parsed or not right_parsed:
+        return 0
+    for i in range(3):
+        if left_parsed[i] != right_parsed[i]:
+            return 1 if left_parsed[i] > right_parsed[i] else -1
+    return compare_prerelease(left_parsed[3], right_parsed[3])
+
+
+def is_newer_version(candidate, installed):
+    return compare_semver(candidate, installed) > 0
+
+
+def version_tag(value):
+    value = str(value).strip()
+    if value.startswith("v"):
+        return value
+    return "v%s" % value
+
+
+def release_api_url():
+    return os.environ.get("AGENTIC_CONFIG_RELEASE_API_URL", DEFAULT_RELEASE_API_URL)
+
+
+def release_archive_base():
+    return os.environ.get(
+        "AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE", DEFAULT_RELEASE_ARCHIVE_BASE)
+
+
+def release_archive_url(tag):
+    return "%s/%s.tar.gz" % (release_archive_base().rstrip("/"), version_tag(tag))
+
+
+def release_html_url(tag):
+    return "%s/releases/tag/%s" % (GITHUB_BASE, version_tag(tag))
+
+
+def open_url(url, timeout=10):
+    if url.startswith("file://"):
+        return urllib.request.urlopen(url, timeout=timeout)
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "agentic-config/%s" % current_version(),
+        },
+    )
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def fetch_json(url, timeout=10):
+    with open_url(url, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def select_release(payload):
+    if isinstance(payload, list):
+        for item in payload:
+            if item.get("draft") or item.get("prerelease"):
+                continue
+            if item.get("tag_name"):
+                return item
+        return None
+    if isinstance(payload, dict) and payload.get("tag_name"):
+        if payload.get("draft") or payload.get("prerelease"):
+            return None
+        return payload
+    return None
+
+
+def latest_release(timeout=10):
+    payload = fetch_json(release_api_url(), timeout=timeout)
+    release = select_release(payload)
+    if not release:
+        raise RuntimeError("no stable Agentic Config Kit release found")
+    tag = release["tag_name"]
+    return {
+        "tag": tag,
+        "version": tag[1:] if tag.startswith("v") else tag,
+        "url": release.get("html_url") or release_html_url(tag),
+        "archive_url": release_archive_url(tag),
+    }
+
+
+def update_cache_dir():
+    if os.environ.get("AGENTIC_CONFIG_CACHE_DIR"):
+        return os.environ["AGENTIC_CONFIG_CACHE_DIR"]
+    if os.environ.get("XDG_CACHE_HOME"):
+        return os.path.join(os.environ["XDG_CACHE_HOME"], "agentic-config")
+    return os.path.join(os.path.expanduser("~"), ".cache", "agentic-config")
+
+
+def update_cache_path():
+    return os.path.join(update_cache_dir(), "update-check.json")
+
+
+def read_update_cache():
+    try:
+        with open(update_cache_path(), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def write_update_cache(release):
+    data = {
+        "checked_at": int(time.time()),
+        "latest": release.get("version") or release.get("tag"),
+        "tag": release.get("tag"),
+        "url": release.get("url"),
+    }
+    try:
+        cache_dir = update_cache_dir()
+        if not os.path.isdir(cache_dir):
+            os.makedirs(cache_dir)
+        with open(update_cache_path(), "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+            f.write("\n")
+    except OSError:
+        pass
+
+
+def cache_is_fresh(cache):
+    try:
+        checked_at = int(cache.get("checked_at", 0))
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return (time.time() - checked_at) < UPDATE_CACHE_TTL_SECONDS
+
+
+def cached_release(cache):
+    if not cache:
+        return None
+    latest = cache.get("latest") or cache.get("tag")
+    tag = cache.get("tag") or version_tag(latest)
+    return {
+        "tag": tag,
+        "version": latest[1:] if isinstance(latest, str) and latest.startswith("v") else latest,
+        "url": cache.get("url") or release_html_url(tag),
+        "archive_url": release_archive_url(tag),
+    }
+
+
+def print_update_notice(release, command):
+    latest = release.get("version") or release.get("tag")
+    current = current_version()
+    eprint("")
+    eprint("Agentic Config Kit update available: %s -> %s" % (current, latest))
+    eprint("Run: %s update" % command)
+    if release.get("url"):
+        eprint("Release: %s" % release["url"])
+
+
+def auto_update_check(command):
+    if os.environ.get("AGENTIC_CONFIG_NO_UPDATE_CHECK"):
+        return
+    force = os.environ.get("AGENTIC_CONFIG_UPDATE_CHECK_ALWAYS") == "1"
+    if not force and not sys.stderr.isatty():
+        return
+
+    cache = read_update_cache()
+    release = cached_release(cache) if cache_is_fresh(cache) else None
+    if not release:
+        try:
+            release = latest_release(timeout=3)
+            write_update_cache(release)
+        except Exception:
+            return
+    if release and is_newer_version(release.get("version"), current_version()):
+        print_update_notice(release, command)
 
 
 def ensure_kit():
@@ -144,7 +391,7 @@ def run_sync(repo, ai_dir, args, stealth=False):
     env = dict(os.environ)
     env["AGENTIC_CONFIG_REPO_ROOT"] = repo
     env["AGENTIC_CONFIG_AI_DIR"] = ai_dir
-    env["AGENTIC_CONFIG_COMMAND"] = "agentic-config"
+    env["AGENTIC_CONFIG_COMMAND"] = command_name()
     if stealth:
         env["AGENTIC_CONFIG_STEALTH"] = "1"
     else:
@@ -318,46 +565,125 @@ def proxy(cmd, rest):
     repo, ai_dir, stealth = discover_config(os.getcwd())
     if not repo:
         eprint("ERROR: no Agentic Config Kit source found.")
-        eprint("Run `agentic-config init` or `agentic-config init --stealth` first.")
+        eprint("Run `%s init` or `%s init --stealth` first." %
+               (command_name(), command_name()))
         return 1
     return run_sync(repo, ai_dir, [cmd] + rest, stealth=stealth)
 
 
+def install_update(archive_url):
+    installer = os.path.join(KIT_DIR, "install-agentic-config.sh")
+    if not os.path.isfile(installer):
+        eprint("ERROR: cannot find installer: %s" % installer)
+        return 1
+    env = dict(os.environ)
+    env["AGENTIC_CONFIG_ARCHIVE_URL"] = archive_url
+    env.pop("AGENTIC_CONFIG_SOURCE_DIR", None)
+    return subprocess.call(["sh", installer], env=env)
+
+
+def command_update(argv, command):
+    parser = argparse.ArgumentParser(
+        prog="%s update" % command,
+        description="Check for or install Agentic Config Kit updates.")
+    parser.add_argument("--check", action="store_true",
+                        help="Check for an update without installing it.")
+    parser.add_argument("--force", action="store_true",
+                        help="Install the selected release even if it is not newer.")
+    parser.add_argument("--version", dest="target_version",
+                        help="Install a specific release tag such as v0.1.0.")
+    args = parser.parse_args(argv)
+
+    current = current_version()
+    try:
+        if args.target_version:
+            tag = version_tag(args.target_version)
+            release = {
+                "tag": tag,
+                "version": tag[1:] if tag.startswith("v") else tag,
+                "url": release_html_url(tag),
+                "archive_url": release_archive_url(tag),
+            }
+        else:
+            release = latest_release(timeout=15)
+    except Exception as e:
+        eprint("ERROR: could not check for Agentic Config Kit updates: %s" % e)
+        return 1
+
+    latest = release.get("version") or release.get("tag")
+    newer = is_newer_version(latest, current)
+    write_update_cache(release)
+
+    if args.check:
+        if newer:
+            print("Update available: %s -> %s" % (current, latest))
+            print("Run: %s update" % command)
+            if release.get("url"):
+                print("Release: %s" % release["url"])
+        else:
+            print("Agentic Config Kit is up to date (%s)." % current)
+        return 0
+
+    explicit_version = bool(args.target_version)
+    if not newer and not args.force and not explicit_version:
+        print("Agentic Config Kit is up to date (%s)." % current)
+        return 0
+
+    archive_url = os.environ.get("AGENTIC_CONFIG_ARCHIVE_URL") or release["archive_url"]
+    print("Updating Agentic Config Kit: %s -> %s" % (current, latest))
+    if release.get("url"):
+        print("Release: %s" % release["url"])
+    return install_update(archive_url)
+
+
 def print_help():
+    cmd = command_name()
     print("""Agentic Config Kit
 
 Usage:
-  agentic-config init [--stealth] [--install-hook] [path]
-  agentic-config sync
-  agentic-config check
-  agentic-config doctor [--staged]
-  agentic-config bootstrap
-  agentic-config adopt <ide> <path>
-  agentic-config adopt --all [--global]
-  agentic-config reconcile <kind> <name>
-  agentic-config reconcile --all-exact
-  agentic-config demote <consumer-ide> <generated-path>
-  agentic-config promote <consumer-ide> <generated-path>
-  agentic-config clean [--native-duplicates] [--global]
+  {cmd} init [--stealth] [--install-hook] [path]
+  {cmd} sync
+  {cmd} check
+  {cmd} doctor [--staged]
+  {cmd} bootstrap
+  {cmd} adopt <ide> <path>
+  {cmd} adopt --all [--global]
+  {cmd} reconcile <kind> <name>
+  {cmd} reconcile --all-exact
+  {cmd} demote <consumer-ide> <generated-path>
+  {cmd} promote <consumer-ide> <generated-path>
+  {cmd} clean [--native-duplicates] [--global]
+  {cmd} update [--check] [--force] [--version <tag>]
+  {cmd} version
 
 Normal init creates repo-local `.ai/` source and source-only ignore rules.
 Stealth init creates local ignored `.agentic-config/.ai/` source with no tracked Git changes.
-""".rstrip())
+`agc` is installed as a short alias for `agentic-config`.
+""".format(cmd=cmd).rstrip())
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    cmd_name = command_name()
     if not argv or argv[0] in ("-h", "--help", "help"):
         print_help()
         return 0
     cmd = argv[0]
+    if cmd in ("-V", "--version", "version"):
+        print("%s %s" % (cmd_name, current_version()))
+        return 0
     if cmd == "init":
-        return command_init(argv[1:])
-    if cmd in PROXY_COMMANDS:
-        return proxy(cmd, argv[1:])
-    eprint("ERROR: unknown command: %s" % cmd)
-    eprint("Run `agentic-config --help`.")
-    return 1
+        rc = command_init(argv[1:])
+    elif cmd == "update":
+        return command_update(argv[1:], cmd_name)
+    elif cmd in PROXY_COMMANDS:
+        rc = proxy(cmd, argv[1:])
+    else:
+        eprint("ERROR: unknown command: %s" % cmd)
+        eprint("Run `%s --help`." % cmd_name)
+        return 1
+    auto_update_check(cmd_name)
+    return rc
 
 
 if __name__ == "__main__":
