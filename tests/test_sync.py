@@ -105,7 +105,9 @@ class VersionUpdateTests(unittest.TestCase):
         self.assertIn("model-agnostic and operating-system-agnostic", agent_runbook)
         self.assertIn("Model Suitability Notice", agent_runbook)
         self.assertIn("stronger coding/reasoning model", agent_runbook)
-        self.assertIn("latest stable GitHub Release", agent_runbook)
+        self.assertIn("source recorded by the installed CLI", agent_runbook)
+        self.assertIn("private mirror, do not use the public curl command", agent_runbook)
+        self.assertIn("YOUR_PRIVATE_AGENTIC_CONFIG_REPO_URL", readme)
         self.assertIn("Never run angle-bracket placeholders literally", agent_runbook)
         self.assertIn("AGENTIC-CONFIG-RUNBOOK.md", install_runbook)
         self.assertIn("AGENTIC-CONFIG-RUNBOOK.md", update_runbook)
@@ -1089,6 +1091,104 @@ class CliTests(unittest.TestCase):
             stderr=subprocess.STDOUT)
         self.assertEqual(0, agc_result.returncode, agc_result.stdout)
         self.assertEqual("agc 0.1.0", agc_result.stdout.strip())
+
+    def test_installer_derives_update_source_from_private_git_remote(self):
+        if shutil.which("git") is None:
+            self.skipTest("git is not available")
+        source = self.path("private-source")
+        os.makedirs(source)
+        shutil.copytree(os.path.join(ROOT, ".ai"), os.path.join(source, ".ai"))
+        for rel in [
+                "agentic-config",
+                "sync-agentic.sh",
+                "install-agentic-config.sh",
+                "uninstall-agentic-config.sh",
+                "VERSION",
+        ]:
+            shutil.copy2(os.path.join(ROOT, rel), os.path.join(source, rel))
+        subprocess.check_call(["git", "init"], cwd=source,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.check_call([
+            "git", "remote", "add", "origin",
+            "https://user:secret@ghe.example.test/ORG/agentic-config.git",
+        ], cwd=source)
+
+        install_home = self.path("private-home", "share", "agentic-config-kit")
+        install_bin = self.path("private-home", "bin")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = source
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        result = subprocess.run(
+            ["sh", os.path.join(source, "install-agentic-config.sh")],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+
+        marker = read(os.path.join(install_home, ".agentic-config-kit-install"))
+        self.assertNotIn("secret", marker)
+        self.assertIn(
+            "source_base=https://ghe.example.test/ORG/agentic-config",
+            marker)
+        self.assertIn(
+            "release_api_url=https://ghe.example.test/api/v3/repos/ORG/agentic-config/releases/latest",
+            marker)
+        self.assertIn(
+            "release_archive_base=https://ghe.example.test/ORG/agentic-config/archive/refs/tags",
+            marker)
+        self.assertIn(
+            "release_html_base=https://ghe.example.test/ORG/agentic-config",
+            marker)
+
+    def test_update_check_uses_installed_release_source_marker(self):
+        release_path = self.path("marker-release.json")
+        write(release_path, json.dumps({
+            "tag_name": "v0.2.0",
+            "prerelease": False,
+            "draft": False,
+        }))
+        install_home = self.path("marker-home", "share", "agentic-config-kit")
+        install_bin = self.path("marker-home", "bin")
+        env = dict(self.env)
+        env["AGENTIC_CONFIG_SOURCE_DIR"] = ROOT
+        env["AGENTIC_CONFIG_HOME"] = install_home
+        env["AGENTIC_CONFIG_BIN"] = install_bin
+        env["AGENTIC_CONFIG_RELEASE_API_URL"] = "file://%s" % release_path
+        env["AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE"] = (
+            "https://mirror.example.test/agentic-config/archive/refs/tags")
+        env["AGENTIC_CONFIG_RELEASE_HTML_BASE"] = (
+            "https://mirror.example.test/agentic-config")
+        result = subprocess.run(
+            ["sh", CLI_INSTALLER_SRC],
+            cwd=self.tmp,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+
+        installed_env = dict(self.env)
+        installed_env.pop("AGENTIC_CONFIG_KIT_DIR", None)
+        installed_env.pop("AGENTIC_CONFIG_SOURCE_DIR", None)
+        installed_env.pop("AGENTIC_CONFIG_RELEASE_API_URL", None)
+        installed_env.pop("AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE", None)
+        installed_env.pop("AGENTIC_CONFIG_RELEASE_HTML_BASE", None)
+        installed_cli = os.path.join(install_bin, "agentic-config")
+        update = subprocess.run(
+            [installed_cli, "update", "--check"],
+            cwd=self.tmp,
+            env=installed_env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        self.assertEqual(0, update.returncode, update.stdout)
+        self.assertIn("Update available: 0.1.0 -> 0.2.0", update.stdout)
+        self.assertIn(
+            "Release: https://mirror.example.test/agentic-config/releases/tag/v0.2.0",
+            update.stdout)
 
     def test_cli_uninstall_dry_run_keeps_install(self):
         install_home = self.path("home", "share", "agentic-config-kit")

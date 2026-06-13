@@ -21,8 +21,10 @@ decisions, safety checks, and verification order.
 | Uninstall or clean reinstall | [Uninstall Or Clean Reinstall](#uninstall-or-clean-reinstall) |
 | Fresh clone of a repo that already uses Agentic Config | Run `agentic bootstrap`, then [Verify And Report](#verify-and-report) |
 
-Default to the latest stable GitHub Release unless the user explicitly asks for
-a clean local checkout, branch, tag, or ref.
+For updates, default to the source recorded by the installed CLI. For first-time
+public installs, default to the latest stable public GitHub Release. Use a
+private mirror, clean local checkout, branch, tag, or ref only when the user
+provides or requests that source.
 
 ## Model Suitability Notice
 
@@ -123,7 +125,7 @@ If a command exists, choose `<agentic-cmd>` and run:
 
 ## Select A Reproducible Kit Source
 
-For normal user-level install or update, prefer the latest stable release:
+For an already-installed CLI, check the source recorded at install time:
 
 ```bash
 <agentic-cmd> update --check
@@ -135,11 +137,25 @@ For a specific release:
 <agentic-cmd> update --check --version v0.1.0
 ```
 
-If the CLI is not installed yet, the installer resolves the latest stable release:
+If the CLI is not installed yet and the user wants the public source, the public
+installer resolves the latest stable public release:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
+
+If the user wants a private mirror, do not use the public curl command. Clone
+the private mirror URL supplied by the user, then install from that clean
+checkout:
+
+```bash
+git clone <kit-remote-url> <temp-dir>/agentic-config
+cd <temp-dir>/agentic-config
+./install-agentic-config.sh
+```
+
+The installer records the selected source so later `agentic update` checks use
+that source unless overridden with environment variables.
 
 Use a branch, tag, ref, or local checkout only when the user requested it. For a
 branch or remote ref, use a clean committed source and record the commit SHA:
@@ -187,14 +203,14 @@ unavailable and continue only after syntax checks pass.
 
 ## Install Or Initialize A Target Repo
 
-If `agentic` or `agentic-config` is not installed yet, install the latest stable
-GitHub Release:
+If `agentic` or `agentic-config` is not installed yet, install from the source
+the user can access. For public GitHub:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Thjodann/agentic-config/main/install-agentic-config.sh | sh
 ```
 
-If working from a clean local kit checkout without network access:
+For a private mirror or clean local kit checkout:
 
 ```bash
 ./install-agentic-config.sh
@@ -288,8 +304,10 @@ user-level.
 
 ## Update Agentic Config
 
-Agentic Config uses SemVer GitHub Release tags such as `v0.1.0`. Stable releases
-are the canonical install and update source; prereleases are ignored by default.
+Agentic Config uses SemVer release tags such as `v0.1.0`. The installer records
+the selected source, so public installs update from public GitHub and private
+mirror installs update from the recorded private mirror. Prereleases are ignored
+by default.
 
 Check the installed version:
 
@@ -304,7 +322,7 @@ Check for updates:
 agentic update --check
 ```
 
-Install the latest stable CLI and bundled templates:
+Install the latest stable CLI and bundled templates from the recorded source:
 
 ```bash
 agentic update
@@ -318,6 +336,8 @@ agentic update --version v0.1.0
 
 Self-update refreshes the user-level CLI and bundled templates. It does not
 overwrite a target repo's initialized `.ai/` or `.agentic-config/.ai/` source.
+If the user needs to switch sources, install from a clean checkout of the new
+source.
 
 If the user explicitly requested a clean local source instead of a release:
 
@@ -551,8 +571,10 @@ Runbook:
 https://raw.githubusercontent.com/Thjodann/agentic-config/main/AGENTIC-CONFIG-RUNBOOK.md
 
 Use the runbook's process order exactly, but translate shell syntax for this
-environment when needed. Prefer the latest stable GitHub Release. Do not install
-from a dirty working tree unless I explicitly say those changes are in scope.
+environment when needed. For updates, use the source recorded by the installed
+CLI. For first-time public installs, prefer the latest stable public GitHub
+Release. Do not install from a dirty working tree unless I explicitly say those
+changes are in scope.
 
 Detect whether this target repo uses normal `.ai/` or stealth
 `.agentic-config/.ai/`. Preserve repo-specific assets. Do not edit generated

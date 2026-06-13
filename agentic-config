@@ -27,6 +27,7 @@ GITHUB_BASE = "https://github.com/%s" % REPO_SLUG
 GITHUB_API_BASE = "https://api.github.com/repos/%s" % REPO_SLUG
 DEFAULT_RELEASE_API_URL = "%s/releases/latest" % GITHUB_API_BASE
 DEFAULT_RELEASE_ARCHIVE_BASE = "%s/archive/refs/tags" % GITHUB_BASE
+DEFAULT_RELEASE_HTML_BASE = GITHUB_BASE
 DEFAULT_VERSION = "0.1.0"
 INSTALL_MARKER = ".agentic-config-kit-install"
 UPDATE_CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -149,13 +150,48 @@ def version_tag(value):
     return "v%s" % value
 
 
+def install_marker_path():
+    return os.path.join(KIT_DIR, INSTALL_MARKER)
+
+
+def read_install_marker():
+    data = {}
+    try:
+        with open(install_marker_path(), encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                data[key.strip()] = value.strip()
+    except OSError:
+        pass
+    return data
+
+
+def install_marker_value(key):
+    return read_install_marker().get(key)
+
+
 def release_api_url():
-    return os.environ.get("AGENTIC_CONFIG_RELEASE_API_URL", DEFAULT_RELEASE_API_URL)
+    return (
+        os.environ.get("AGENTIC_CONFIG_RELEASE_API_URL")
+        or install_marker_value("release_api_url")
+        or DEFAULT_RELEASE_API_URL)
 
 
 def release_archive_base():
-    return os.environ.get(
-        "AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE", DEFAULT_RELEASE_ARCHIVE_BASE)
+    return (
+        os.environ.get("AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE")
+        or install_marker_value("release_archive_base")
+        or DEFAULT_RELEASE_ARCHIVE_BASE)
+
+
+def release_html_base():
+    return (
+        os.environ.get("AGENTIC_CONFIG_RELEASE_HTML_BASE")
+        or install_marker_value("release_html_base")
+        or DEFAULT_RELEASE_HTML_BASE)
 
 
 def release_archive_url(tag):
@@ -163,7 +199,7 @@ def release_archive_url(tag):
 
 
 def release_html_url(tag):
-    return "%s/releases/tag/%s" % (GITHUB_BASE, version_tag(tag))
+    return "%s/releases/tag/%s" % (release_html_base().rstrip("/"), version_tag(tag))
 
 
 def open_url(url, timeout=10):
@@ -580,6 +616,9 @@ def install_update(archive_url):
         return 1
     env = dict(os.environ)
     env["AGENTIC_CONFIG_ARCHIVE_URL"] = archive_url
+    env["AGENTIC_CONFIG_RELEASE_API_URL"] = release_api_url()
+    env["AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE"] = release_archive_base()
+    env["AGENTIC_CONFIG_RELEASE_HTML_BASE"] = release_html_base()
     env.pop("AGENTIC_CONFIG_SOURCE_DIR", None)
     return subprocess.call(["sh", installer], env=env)
 

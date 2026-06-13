@@ -10,8 +10,12 @@ set -eu
 
 INSTALL_DIR="${AGENTIC_CONFIG_HOME:-$HOME/.local/share/agentic-config-kit}"
 BIN_DIR="${AGENTIC_CONFIG_BIN:-$HOME/.local/bin}"
-RELEASE_API_URL="${AGENTIC_CONFIG_RELEASE_API_URL:-https://api.github.com/repos/Thjodann/agentic-config/releases/latest}"
-RELEASE_ARCHIVE_BASE="${AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE:-https://github.com/Thjodann/agentic-config/archive/refs/tags}"
+DEFAULT_RELEASE_API_URL="https://api.github.com/repos/Thjodann/agentic-config/releases/latest"
+DEFAULT_RELEASE_ARCHIVE_BASE="https://github.com/Thjodann/agentic-config/archive/refs/tags"
+DEFAULT_RELEASE_HTML_BASE="https://github.com/Thjodann/agentic-config"
+RELEASE_API_URL="${AGENTIC_CONFIG_RELEASE_API_URL:-$DEFAULT_RELEASE_API_URL}"
+RELEASE_ARCHIVE_BASE="${AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE:-$DEFAULT_RELEASE_ARCHIVE_BASE}"
+RELEASE_HTML_BASE="${AGENTIC_CONFIG_RELEASE_HTML_BASE:-$DEFAULT_RELEASE_HTML_BASE}"
 ARCHIVE_URL="${AGENTIC_CONFIG_ARCHIVE_URL:-}"
 
 tmp_dir=""
@@ -63,6 +67,70 @@ if [ ! -f "$source_dir/agentic-config" ] || [ ! -d "$source_dir/.ai" ]; then
     exit 1
 fi
 
+source_remote_url=""
+if command -v git >/dev/null 2>&1; then
+    source_remote_url=$(git -C "$source_dir" config --get remote.origin.url 2>/dev/null || true)
+fi
+
+remote_to_https_base() {
+    remote="$1"
+    case "$remote" in
+        https://*/*)
+            rest=${remote#https://}
+            rest=${rest#*@}
+            rest=${rest%.git}
+            printf 'https://%s\n' "$rest"
+            ;;
+        http://*/*)
+            rest=${remote#http://}
+            rest=${rest#*@}
+            rest=${rest%.git}
+            printf 'http://%s\n' "$rest"
+            ;;
+        git@*:*)
+            rest=${remote#git@}
+            host=${rest%%:*}
+            path=${rest#*:}
+            path=${path%.git}
+            printf 'https://%s/%s\n' "$host" "$path"
+            ;;
+        ssh://git@*/*)
+            rest=${remote#ssh://git@}
+            host=${rest%%/*}
+            path=${rest#*/}
+            path=${path%.git}
+            printf 'https://%s/%s\n' "$host" "$path"
+            ;;
+    esac
+}
+
+release_source_base=""
+if [ -n "$source_remote_url" ]; then
+    release_source_base=$(remote_to_https_base "$source_remote_url" || true)
+fi
+
+if [ -n "$release_source_base" ]; then
+    base_without_scheme=${release_source_base#https://}
+    base_without_scheme=${base_without_scheme#http://}
+    host=${base_without_scheme%%/*}
+    repo_path=${base_without_scheme#*/}
+    if [ "$repo_path" != "$base_without_scheme" ]; then
+        if [ -z "${AGENTIC_CONFIG_RELEASE_API_URL:-}" ]; then
+            if [ "$host" = "github.com" ]; then
+                RELEASE_API_URL="https://api.github.com/repos/$repo_path/releases/latest"
+            else
+                RELEASE_API_URL="https://$host/api/v3/repos/$repo_path/releases/latest"
+            fi
+        fi
+        if [ -z "${AGENTIC_CONFIG_RELEASE_ARCHIVE_BASE:-}" ]; then
+            RELEASE_ARCHIVE_BASE="$release_source_base/archive/refs/tags"
+        fi
+        if [ -z "${AGENTIC_CONFIG_RELEASE_HTML_BASE:-}" ]; then
+            RELEASE_HTML_BASE="$release_source_base"
+        fi
+    fi
+fi
+
 mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 
 rm -rf "$INSTALL_DIR/.ai" "$INSTALL_DIR/hooks" "$INSTALL_DIR/assets"
@@ -75,7 +143,13 @@ for file in agentic-config sync-agentic.sh install.sh install-agentic-config.sh 
         cp "$source_dir/$file" "$INSTALL_DIR/$file"
     fi
 done
-printf '%s\n' "managed_by=agentic-config-kit" > "$INSTALL_DIR/.agentic-config-kit-install"
+{
+    printf '%s\n' "managed_by=agentic-config-kit"
+    [ -n "$release_source_base" ] && printf '%s\n' "source_base=$release_source_base"
+    printf '%s\n' "release_api_url=$RELEASE_API_URL"
+    printf '%s\n' "release_archive_base=$RELEASE_ARCHIVE_BASE"
+    printf '%s\n' "release_html_base=$RELEASE_HTML_BASE"
+} > "$INSTALL_DIR/.agentic-config-kit-install"
 
 chmod +x "$INSTALL_DIR/agentic-config" "$INSTALL_DIR/sync-agentic.sh"
 [ -f "$INSTALL_DIR/uninstall-agentic-config.sh" ] && chmod +x "$INSTALL_DIR/uninstall-agentic-config.sh"
