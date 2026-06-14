@@ -4,6 +4,19 @@ All notable changes to Agentic Config are tracked here.
 
 ## Unreleased
 
+## v0.1.2 - 2026-06-14
+
+- Fix `agentic status --verbose` so truncated blocker and detail lists (conflicts,
+  native-only assets, exact duplicate groups, stale outputs) print in full instead
+  of stopping at eight items.
+- Fix misleading status hints: default output now points to `status --verbose` only
+  when lists were truncated, and optional diagnostics point to `agentic doctor`.
+- Clarify README conflict drill to use `agentic status --verbose` before resolving
+  divergent native files, and document that pre-tracked IDE folders can remain
+  tracked even after Agentic Config adds ignore rules.
+- Add runbook guidance for tracked-vs-ignored generated IDE folders as a manual Git
+  cleanup decision, not an Agentic Config failure.
+
 ## v0.1.1 - 2026-06-14
 
 - Add intent-level CLI commands: `agentic setup`, `agentic status`, and
