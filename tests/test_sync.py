@@ -1042,6 +1042,42 @@ class CliTests(unittest.TestCase):
         result = self.run_cli("status", "--check", cwd=self.tmp)
         self.assertIn("In sync", result.stdout)
 
+    def test_status_verbose_shows_all_conflicts(self):
+        self.init_git()
+        self.run_cli("setup", self.tmp)
+        for index in range(9):
+            name = "conflict-%02d" % index
+            write(self.path(".ai", "rules", "%s.md" % name), """---
+name: %s
+description: Canonical conflict fixture.
+activation: model_decision
+---
+
+Canonical body %02d.
+""" % (name, index))
+            write(self.path(".cursor", "rules", "%s.mdc" % name), """---
+description: Canonical conflict fixture.
+alwaysApply: false
+---
+
+Divergent native body %02d.
+""" % index)
+
+        compact = self.run_cli("status", check=False)
+        self.assertNotEqual(0, compact.returncode)
+        self.assertIn("9 conflict(s) need a human decision.", compact.stdout)
+        self.assertIn("... and 1 more", compact.stdout)
+        self.assertNotIn(".cursor/rules/conflict-08.mdc", compact.stdout)
+        self.assertIn("status --verbose for full lists.", compact.stdout)
+
+        verbose = self.run_cli("status", "--verbose", check=False)
+        self.assertNotEqual(0, verbose.returncode)
+        self.assertNotIn("... and 1 more", verbose.stdout)
+        for index in range(9):
+            self.assertIn(
+                ".cursor/rules/conflict-%02d.mdc" % index,
+                verbose.stdout)
+
     def test_import_all_wraps_adopt_and_reports_status(self):
         self.init_git()
         self.run_cli("setup", self.tmp)

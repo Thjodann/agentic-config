@@ -143,12 +143,15 @@ Finish the drill by resolving those conflicts, then sync:
 
 ```bash
 # See exactly which native files conflict with .ai/ and why.
-agentic status
+agentic status --verbose
 
 # Decide a winner for each conflict. The simplest choice is to keep the
-# canonical version you just imported and delete the divergent native copies
-# status lists under "Blocking", for example:
-rm .cursor/skills/fixture-skill/SKILL.md   # ...and the other listed conflicts
+# canonical version you just imported. Review every listed conflict, then delete
+# only the divergent native copies you do not want to keep, for example:
+rm .cursor/skills/fixture-skill/SKILL.md
+
+# If you want the broader diagnostic report instead, run:
+agentic doctor
 
 # Now the round-trip completes cleanly.
 agentic sync
@@ -211,6 +214,12 @@ It puts the shared source in `.ai/` so it can be committed and reused by everyon
 Usually that means committing `.ai/`, `.ai/.manifest.json`, `.gitignore`,
 `AGENTS.md`, and `sync-agentic.sh`. After cloning, each teammate can run
 `agentic setup .`.
+
+If a repo already committed native tool folders such as `.cursor/` or `.claude/`,
+those files remain tracked even after Agentic Config adds ignore rules for future
+generated output. Treat any `modified + ignored` Git status as an explicit cleanup
+decision: review the files, import or resolve them if needed, then choose whether
+to remove them from Git tracking with normal Git commands.
 
 Stealth mode is best for private trials:
 
