@@ -135,7 +135,7 @@ For an already-installed CLI, check the source recorded at install time:
 For a specific release:
 
 ```bash
-<agentic-cmd> update --check --version v0.1.2
+<agentic-cmd> update --check --version v0.1.3
 ```
 
 If the CLI is not installed yet and the user wants the public source, the public
@@ -315,11 +315,11 @@ Do not create the GitHub Release until the user has tested the draft and approve
 publication.
 
 1. Pick the next SemVer version. For a patch-only maintenance release, increment
-   by `0.0.1` (for example, `0.1.1` -> `0.1.2`) and use tag form `v0.1.2`.
+   by `0.0.1` (for example, `0.1.2` -> `0.1.3`) and use tag form `v0.1.3`.
 2. Update both version sources:
 
    ```bash
-   NEXT_VERSION=0.1.2
+   NEXT_VERSION=0.1.3
    printf '%s\n' "$NEXT_VERSION" > VERSION
    ```
 
@@ -328,7 +328,7 @@ publication.
    release section:
 
    ```markdown
-   ## v0.1.2 - YYYY-MM-DD
+   ## v0.1.3 - YYYY-MM-DD
    ```
 
 4. Update tests or examples that assert the current version string.
@@ -354,7 +354,7 @@ publication.
 
 ## Update Agentic Config
 
-Agentic Config uses SemVer release tags such as `v0.1.2`. The installer records
+Agentic Config uses SemVer release tags such as `v0.1.3`. The installer records
 the selected source, so public installs update from public GitHub and private
 mirror installs update from the recorded private mirror. Prereleases are ignored
 by default.
@@ -381,7 +381,7 @@ agentic update
 Install a specific release:
 
 ```bash
-agentic update --version v0.1.2
+agentic update --version v0.1.3
 ```
 
 Self-update refreshes the user-level CLI and bundled templates. It does not

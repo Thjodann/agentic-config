@@ -146,9 +146,18 @@ Finish the drill by resolving those conflicts, then sync:
 agentic status --verbose
 
 # Decide a winner for each conflict. The simplest choice is to keep the
-# canonical version you just imported. Review every listed conflict, then delete
-# only the divergent native copies you do not want to keep, for example:
-rm .cursor/skills/fixture-skill/SKILL.md
+# canonical version you just imported. Review every path listed under
+# Blocking -> Conflicts, then delete only the divergent native copies you do
+# not want to keep. On the example repo, that is usually these nine files:
+rm .claude/skills/fixture-skill/SKILL.md \
+   .cursor/skills/fixture-skill/SKILL.md \
+   .codex/agents/fixture-reviewer.toml \
+   .devin/rules/fixture-repo-guidance.md \
+   .codex/skills/fixture-skill/SKILL.md \
+   .windsurf/rules/fixture-repo-guidance.md \
+   .continue/prompts/fixture-summarize.md \
+   .windsurf/skills/fixture-skill/SKILL.md \
+   .cursor/rules/fixture-repo-guidance.mdc
 
 # If you want the broader diagnostic report instead, run:
 agentic doctor

@@ -1868,6 +1868,7 @@ def command_adopt(args):
                     "%d native asset(s) still need manual resolution; "
                     "review Blocking items before syncing with: %s" %
                     (len(unresolved), shell_command([COMMAND_NAME, "status"])))
+                return 1
             return 0
         if not args.ide or not args.path:
             raise ValueError("usage: adopt <ide> <path> or adopt --all")
@@ -1953,7 +1954,7 @@ def command_doctor(args):
         print("Generated but stale:")
         for item in state["drift"]:
             print("  %s" % item)
-        print("  run %s" % shell_command([COMMAND_NAME]))
+        print("  run %s" % shell_command([COMMAND_NAME, "sync"]))
     if conflicts:
         print("Canonical conflicts:")
         for item in conflicts:
@@ -2379,6 +2380,11 @@ def command_clean(args):
     print("Cleaned %d generated projection files." % len(removed))
     for p in removed:
         print("  removed %s" % p)
+    tracked_removed = sorted(p for p in removed if p in git_tracked_paths())
+    if tracked_removed:
+        print(
+            "Warning: %d cleaned path(s) are still tracked by Git; "
+            "review git status before committing." % len(tracked_removed))
     if args.native_duplicates:
         print("Cleaned %d exact native duplicate files." % len(native_removed))
         for p in native_removed:

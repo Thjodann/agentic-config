@@ -547,7 +547,8 @@ Debug from the user-level skill.
         self.add_native_skill(".claude/skills", "shared", body="Body B (diverges).")
         self.add_native_skill(".windsurf/skills", "later", body="Adopt me too.")
 
-        result = self.run_sync("adopt", "--all")
+        result = self.run_sync("adopt", "--all", check=False)
+        self.assertNotEqual(0, result.returncode)
         self.assertIn("adopted 2 native assets", result.stdout)
         self.assertIn("skip .claude/skills/shared/SKILL.md", result.stdout)
         self.assertIn("still need manual resolution", result.stdout)
@@ -555,6 +556,17 @@ Debug from the user-level skill.
         self.assertTrue(os.path.exists(self.path(".ai", "skills", "shared", "SKILL.md")))
         self.assertIn("Body A.", read(self.path(".ai", "skills", "shared", "SKILL.md")))
         self.assertTrue(os.path.exists(self.path(".ai", "skills", "later", "SKILL.md")))
+
+    def test_doctor_stale_hint_includes_sync_command(self):
+        self.add_rule()
+        self.run_sync()
+        rule_path = self.path(".ai", "rules", "repo-guidance.md")
+        write(rule_path, read(rule_path) + "\nExtra canonical edit.\n")
+
+        result = self.run_sync("doctor", check=False)
+        self.assertIn("Generated but stale:", result.stdout)
+        self.assertIn("run agentic sync", result.stdout)
+        self.assertNotIn("\n  run agentic\n", result.stdout)
 
     def test_adopt_all_skips_surface_already_represented(self):
         self.add_native_skill(".claude/skills", "dup", body="Identical body.")
@@ -753,6 +765,26 @@ Human body that should be adopted first.
         self.assertIn("refusing to clean markerless file", result.stdout)
         self.assertTrue(os.path.exists(generated_path))
         self.assertEqual(read(generated_path), "# Human native command\n\nNo marker.\n")
+
+    def test_clean_warns_when_removing_tracked_generated_files(self):
+        if shutil.which("git") is None:
+            self.skipTest("git is not available")
+        subprocess.check_call(
+            ["git", "init"], cwd=self.tmp,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.check_call(
+            ["git", "config", "user.email", "test@example.com"], cwd=self.tmp)
+        subprocess.check_call(
+            ["git", "config", "user.name", "Agentic Config Test"], cwd=self.tmp)
+        self.add_rule("root-rule", "always_on")
+        self.run_sync()
+        tracked = ".cursor/rules/root-rule.mdc"
+        subprocess.check_call(["git", "add", tracked], cwd=self.tmp)
+        subprocess.check_call(
+            ["git", "commit", "-m", "track generated projection"], cwd=self.tmp)
+
+        result = self.run_sync("clean")
+        self.assertIn("tracked by Git", result.stdout)
 
     def test_clean_native_duplicates_removes_only_exact_unmanaged_duplicates(self):
         self.add_skill("debugger")
@@ -1078,6 +1110,32 @@ Divergent native body %02d.
                 ".cursor/rules/conflict-%02d.mdc" % index,
                 verbose.stdout)
 
+    def test_adopt_all_and_import_all_share_exit_code_on_conflicts(self):
+        self.init_git()
+        self.run_cli("setup", self.tmp)
+        write(self.path(".agents/skills/shared/SKILL.md"), """---
+name: shared
+description: Shared skill A.
+allowed-tools: Bash, Read
+---
+
+Body A.
+""")
+        write(self.path(".claude/skills/shared/SKILL.md"), """---
+name: shared
+description: Shared skill B.
+allowed-tools: Bash, Read
+---
+
+Body B (diverges).
+""")
+
+        adopt = self.run_cli("adopt", "--all", cwd=self.tmp, check=False)
+        import_result = self.run_cli("import", "--all", cwd=self.tmp, check=False)
+        self.assertNotEqual(0, adopt.returncode)
+        self.assertNotEqual(0, import_result.returncode)
+        self.assertIn("still need manual resolution", adopt.stdout)
+
     def test_import_all_wraps_adopt_and_reports_status(self):
         self.init_git()
         self.run_cli("setup", self.tmp)
@@ -1163,7 +1221,7 @@ Use service boundaries.
 
     def test_agentic_config_version_reports_current_version(self):
         result = self.run_cli("--version")
-        self.assertEqual("agentic-config 0.1.2", result.stdout.strip())
+        self.assertEqual("agentic-config 0.1.3", result.stdout.strip())
 
     def test_update_check_reports_new_release(self):
         release_path = self.path("latest-release.json")
@@ -1176,7 +1234,7 @@ Use service boundaries.
         self.env["AGENTIC_CONFIG_RELEASE_API_URL"] = "file://%s" % release_path
 
         result = self.run_cli("update", "--check")
-        self.assertIn("Update available: 0.1.2 -> 0.2.0", result.stdout)
+        self.assertIn("Update available: 0.1.3 -> 0.2.0", result.stdout)
         self.assertIn("Run: agentic-config update", result.stdout)
 
     def test_cached_update_notice_uses_fresh_cache_without_network(self):
@@ -1195,7 +1253,7 @@ Use service boundaries.
         self.env.pop("AGENTIC_CONFIG_NO_UPDATE_CHECK", None)
 
         result = self.run_cli("init", "--stealth", self.tmp)
-        self.assertIn("Agentic Config update available: 0.1.2 -> 0.2.0",
+        self.assertIn("Agentic Config update available: 0.1.3 -> 0.2.0",
                       result.stdout)
         self.assertIn("Run: agentic-config update", result.stdout)
 
@@ -1272,7 +1330,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, agentic_result.returncode, agentic_result.stdout)
-        self.assertEqual("agentic 0.1.2", agentic_result.stdout.strip())
+        self.assertEqual("agentic 0.1.3", agentic_result.stdout.strip())
         compat_result = subprocess.run(
             [installed_cli, "--version"],
             cwd=self.tmp,
@@ -1281,7 +1339,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, compat_result.returncode, compat_result.stdout)
-        self.assertEqual("agentic-config 0.1.2", compat_result.stdout.strip())
+        self.assertEqual("agentic-config 0.1.3", compat_result.stdout.strip())
         agc_result = subprocess.run(
             [installed_agc, "--version"],
             cwd=self.tmp,
@@ -1290,7 +1348,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, agc_result.returncode, agc_result.stdout)
-        self.assertEqual("agc 0.1.2", agc_result.stdout.strip())
+        self.assertEqual("agc 0.1.3", agc_result.stdout.strip())
 
     def test_installer_derives_update_source_from_private_git_remote(self):
         if shutil.which("git") is None:
@@ -1385,7 +1443,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, update.returncode, update.stdout)
-        self.assertIn("Update available: 0.1.2 -> 0.2.0", update.stdout)
+        self.assertIn("Update available: 0.1.3 -> 0.2.0", update.stdout)
         self.assertIn(
             "Release: https://mirror.example.test/agentic-config/releases/tag/v0.2.0",
             update.stdout)
@@ -1640,7 +1698,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, update.returncode, update.stdout)
-        self.assertIn("Updating Agentic Config: 0.1.2 -> 0.2.0", update.stdout)
+        self.assertIn("Updating Agentic Config: 0.1.3 -> 0.2.0", update.stdout)
         self.assertEqual("0.2.0\n", read(os.path.join(install_home, "VERSION")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agc")))

@@ -4,6 +4,16 @@ All notable changes to Agentic Config are tracked here.
 
 ## Unreleased
 
+## v0.1.3 - 2026-06-14
+
+- Fix the dangling `run agentic` hint in doctor/status verbose stale output; it now
+  correctly suggests `agentic sync`.
+- Align `adopt --all` exit codes with `import --all`: both return non-zero when
+  unresolved conflicts remain after adoption.
+- Improve the example-repo conflict drill in the README with the full nine-file
+  delete set and clearer guidance to review `status --verbose` output first.
+- Warn during `clean` when removed projection paths are still tracked by Git.
+
 ## v0.1.2 - 2026-06-14
 
 - Fix `agentic status --verbose` so truncated blocker and detail lists (conflicts,
