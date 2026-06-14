@@ -225,8 +225,8 @@ esac
 
 echo ""
 echo "Next:"
-echo "  $next_cmd init /path/to/repo"
-echo "  $next_cmd init --stealth /path/to/repo"
+echo "  $next_cmd setup /path/to/repo"
+echo "  $next_cmd setup --stealth /path/to/repo"
 echo ""
 echo "Compatibility command also works:"
-echo "  agentic-config init /path/to/repo"
+echo "  agentic-config setup /path/to/repo"
