@@ -265,6 +265,11 @@ For normal source-only setup, the usual commit set is `.ai/`, `AGENTS.md`,
 hooks. Generated IDE projections should remain ignored local files unless the user
 explicitly wants committed generated output.
 
+If generated IDE folders were already tracked before Agentic Config added ignore
+rules, Git will keep tracking them. Report that as a manual cleanup decision, not
+an Agentic Config failure: review or import the native files first, then use
+normal Git commands if the user wants to stop tracking generated projections.
+
 For stealth setup, the source lives at `.agentic-config/.ai/`, generated IDE
 folders are local ignored files, and `.gitignore` should not change.
 

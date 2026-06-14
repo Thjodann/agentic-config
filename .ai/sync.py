@@ -2007,13 +2007,18 @@ def command_doctor(args):
     ]) else 0
 
 
-def print_limited(items, limit=8):
-    shown = list(items[:limit])
+STATUS_DETAIL_LIMIT = 8
+
+
+def print_limited(items, limit=STATUS_DETAIL_LIMIT, verbose=False):
+    effective_limit = len(items) if verbose else limit
+    shown = list(items[:effective_limit])
     for item in shown:
         print("  %s" % item)
     remaining = len(items) - len(shown)
     if remaining > 0:
         print("  ... and %d more" % remaining)
+    return remaining > 0
 
 
 def status_conflicts(state):
@@ -2030,6 +2035,8 @@ def command_status(args):
     duplicate_blockers = state["duplicate_conflicts"]
     repo_represented = [r for r in state["represented"] if r["scope"] == "repo"]
     global_represented = [r for r in state["represented"] if r["scope"] == "global"]
+    verbose = args.verbose
+    truncated_details = False
 
     blocking = []
     if conflicts:
@@ -2057,16 +2064,19 @@ def command_status(args):
             print("  %s" % item)
         if conflicts:
             print("  Conflicts:")
-            print_limited(conflicts)
+            truncated_details = print_limited(
+                conflicts, verbose=verbose) or truncated_details
         if state["native_only"]:
             print("  Native-only assets:")
-            print_limited(["%s" % r["path"] for r in state["native_only"]])
+            truncated_details = print_limited(
+                ["%s" % r["path"] for r in state["native_only"]],
+                verbose=verbose) or truncated_details
         if state["exact_groups"]:
             print("  Exact duplicate groups:")
-            print_limited([
+            truncated_details = print_limited([
                 "%s %s" % (group[0]["asset"]["type"], group[0]["asset"]["name"])
                 for group in state["exact_groups"]
-            ])
+            ], verbose=verbose) or truncated_details
         print("")
     else:
         print("Blocking:")
@@ -2076,7 +2086,8 @@ def command_status(args):
     if state["drift"]:
         print("Needs update:")
         print("  %d generated output(s) are stale." % len(state["drift"]))
-        print_limited(state["drift"])
+        truncated_details = print_limited(
+            state["drift"], verbose=verbose) or truncated_details
         print("")
     else:
         print("Needs update:")
@@ -2114,11 +2125,16 @@ def command_status(args):
         if global_represented:
             print("  %d global native duplicate(s) are represented in %s/." %
                   (len(global_represented), AI_REL))
-        print("  Run %s status --verbose for full details." % COMMAND_NAME)
+        print("  Run %s doctor for full diagnostics." % COMMAND_NAME)
         print("")
     else:
         print("Optional / informational:")
         print("  None")
+        print("")
+
+    if truncated_details:
+        print("More detail:")
+        print("  Run %s status --verbose for full lists." % COMMAND_NAME)
         print("")
 
     print("Next step:")
