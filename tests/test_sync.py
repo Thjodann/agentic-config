@@ -1127,7 +1127,7 @@ Use service boundaries.
 
     def test_agentic_config_version_reports_current_version(self):
         result = self.run_cli("--version")
-        self.assertEqual("agentic-config 0.1.0", result.stdout.strip())
+        self.assertEqual("agentic-config 0.1.1", result.stdout.strip())
 
     def test_update_check_reports_new_release(self):
         release_path = self.path("latest-release.json")
@@ -1140,7 +1140,7 @@ Use service boundaries.
         self.env["AGENTIC_CONFIG_RELEASE_API_URL"] = "file://%s" % release_path
 
         result = self.run_cli("update", "--check")
-        self.assertIn("Update available: 0.1.0 -> 0.2.0", result.stdout)
+        self.assertIn("Update available: 0.1.1 -> 0.2.0", result.stdout)
         self.assertIn("Run: agentic-config update", result.stdout)
 
     def test_cached_update_notice_uses_fresh_cache_without_network(self):
@@ -1159,7 +1159,7 @@ Use service boundaries.
         self.env.pop("AGENTIC_CONFIG_NO_UPDATE_CHECK", None)
 
         result = self.run_cli("init", "--stealth", self.tmp)
-        self.assertIn("Agentic Config update available: 0.1.0 -> 0.2.0",
+        self.assertIn("Agentic Config update available: 0.1.1 -> 0.2.0",
                       result.stdout)
         self.assertIn("Run: agentic-config update", result.stdout)
 
@@ -1236,7 +1236,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, agentic_result.returncode, agentic_result.stdout)
-        self.assertEqual("agentic 0.1.0", agentic_result.stdout.strip())
+        self.assertEqual("agentic 0.1.1", agentic_result.stdout.strip())
         compat_result = subprocess.run(
             [installed_cli, "--version"],
             cwd=self.tmp,
@@ -1245,7 +1245,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, compat_result.returncode, compat_result.stdout)
-        self.assertEqual("agentic-config 0.1.0", compat_result.stdout.strip())
+        self.assertEqual("agentic-config 0.1.1", compat_result.stdout.strip())
         agc_result = subprocess.run(
             [installed_agc, "--version"],
             cwd=self.tmp,
@@ -1254,7 +1254,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, agc_result.returncode, agc_result.stdout)
-        self.assertEqual("agc 0.1.0", agc_result.stdout.strip())
+        self.assertEqual("agc 0.1.1", agc_result.stdout.strip())
 
     def test_installer_derives_update_source_from_private_git_remote(self):
         if shutil.which("git") is None:
@@ -1349,7 +1349,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, update.returncode, update.stdout)
-        self.assertIn("Update available: 0.1.0 -> 0.2.0", update.stdout)
+        self.assertIn("Update available: 0.1.1 -> 0.2.0", update.stdout)
         self.assertIn(
             "Release: https://mirror.example.test/agentic-config/releases/tag/v0.2.0",
             update.stdout)
@@ -1604,7 +1604,7 @@ Use service boundaries.
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         self.assertEqual(0, update.returncode, update.stdout)
-        self.assertIn("Updating Agentic Config: 0.1.0 -> 0.2.0", update.stdout)
+        self.assertIn("Updating Agentic Config: 0.1.1 -> 0.2.0", update.stdout)
         self.assertEqual("0.2.0\n", read(os.path.join(install_home, "VERSION")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agentic")))
         self.assertTrue(os.path.exists(os.path.join(install_bin, "agc")))

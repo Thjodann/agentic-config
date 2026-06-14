@@ -4,6 +4,8 @@ All notable changes to Agentic Config are tracked here.
 
 ## Unreleased
 
+## v0.1.1 - 2026-06-14
+
 - Add intent-level CLI commands: `agentic setup`, `agentic status`, and
   `agentic import`. Existing implementation commands remain available as
   advanced/backward-compatible commands.

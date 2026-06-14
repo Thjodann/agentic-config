@@ -16,6 +16,7 @@ decisions, safety checks, and verification order.
 | Fresh setup in a repo | [Install Or Initialize A Target Repo](#install-or-initialize-a-target-repo) |
 | Local-only/no tracked Git changes | [Install Or Initialize A Target Repo](#install-or-initialize-a-target-repo), using stealth mode |
 | Existing Cursor, Claude, Codex, Windsurf/Devin, or Continue files | [Adopt Or Reconcile Existing AI Tool Files](#adopt-or-reconcile-existing-ai-tool-files) |
+| Draft a new Agentic Config release | [Draft A Release](#draft-a-release) |
 | Update Agentic Config | [Update Agentic Config](#update-agentic-config) |
 | Verify current state | [Verify And Report](#verify-and-report) |
 | Uninstall or clean reinstall | [Uninstall Or Clean Reinstall](#uninstall-or-clean-reinstall) |
@@ -134,7 +135,7 @@ For an already-installed CLI, check the source recorded at install time:
 For a specific release:
 
 ```bash
-<agentic-cmd> update --check --version v0.1.0
+<agentic-cmd> update --check --version v0.1.1
 ```
 
 If the CLI is not installed yet and the user wants the public source, the public
@@ -302,9 +303,53 @@ Do not clean or import global user-level assets from `~/`. `doctor` reports thos
 overlaps so the user can understand runtime precedence, but global assets stay
 user-level.
 
+## Draft A Release
+
+Use this path when preparing a new Agentic Config release from the kit repository.
+Do not create the GitHub Release until the user has tested the draft and approved
+publication.
+
+1. Pick the next SemVer version. For a patch-only maintenance release, increment
+   by `0.0.1` (for example, `0.1.0` -> `0.1.1`) and use tag form `v0.1.1`.
+2. Update both version sources:
+
+   ```bash
+   NEXT_VERSION=0.1.1
+   printf '%s\n' "$NEXT_VERSION" > VERSION
+   ```
+
+   Then update `DEFAULT_VERSION` in `agentic-config` to the same version.
+3. Move the relevant `CHANGELOG.md` entries from `Unreleased` into a dated
+   release section:
+
+   ```markdown
+   ## v0.1.1 - YYYY-MM-DD
+   ```
+
+4. Update tests or examples that assert the current version string.
+5. Run release validation from the kit repository:
+
+   ```bash
+   python3 -m py_compile .ai/sync.py agentic-config
+   sh -n install-agentic-config.sh
+   sh -n uninstall-agentic-config.sh
+   sh -n sync-agentic.sh
+   sh -n install.sh
+   python3 -m unittest discover -s tests
+   ```
+
+6. Hand the draft to the user for installation/update testing. Include:
+   - target version and tag;
+   - release notes;
+   - changed files;
+   - validation results;
+   - any known warnings or manual checks.
+7. After user approval, commit and tag the release, push the branch and tag, then
+   create the GitHub Release using the `CHANGELOG.md` section as release notes.
+
 ## Update Agentic Config
 
-Agentic Config uses SemVer release tags such as `v0.1.0`. The installer records
+Agentic Config uses SemVer release tags such as `v0.1.1`. The installer records
 the selected source, so public installs update from public GitHub and private
 mirror installs update from the recorded private mirror. Prereleases are ignored
 by default.
@@ -331,7 +376,7 @@ agentic update
 Install a specific release:
 
 ```bash
-agentic update --version v0.1.0
+agentic update --version v0.1.1
 ```
 
 Self-update refreshes the user-level CLI and bundled templates. It does not

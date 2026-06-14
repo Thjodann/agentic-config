@@ -28,7 +28,7 @@ GITHUB_API_BASE = "https://api.github.com/repos/%s" % REPO_SLUG
 DEFAULT_RELEASE_API_URL = "%s/releases/latest" % GITHUB_API_BASE
 DEFAULT_RELEASE_ARCHIVE_BASE = "%s/archive/refs/tags" % GITHUB_BASE
 DEFAULT_RELEASE_HTML_BASE = GITHUB_BASE
-DEFAULT_VERSION = "0.1.0"
+DEFAULT_VERSION = "0.1.1"
 INSTALL_MARKER = ".agentic-config-kit-install"
 UPDATE_CACHE_TTL_SECONDS = 24 * 60 * 60
 SEMVER_RE = re.compile(
@@ -826,7 +826,7 @@ def command_update(argv, command):
     parser.add_argument("--force", action="store_true",
                         help="Install the selected release even if it is not newer.")
     parser.add_argument("--version", dest="target_version",
-                        help="Install a specific release tag such as v0.1.0.")
+                        help="Install a specific release tag such as v0.1.1.")
     args = parser.parse_args(argv)
 
     current = current_version()
