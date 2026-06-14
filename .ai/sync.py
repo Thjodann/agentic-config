@@ -1020,7 +1020,7 @@ def existing_matches_manifest_hash(rel, entry):
     return sha256_bytes(read_bytes(ap)) == entry.get("hash")
 
 
-def assert_safe_file_mutation(rel, old_entry, action):
+def assert_safe_file_mutation(rel, old_entry, action, represented=None):
     ap = abspath(rel)
     if not os.path.exists(ap):
         return
@@ -1030,25 +1030,31 @@ def assert_safe_file_mutation(rel, old_entry, action):
             (action, rel))
     if has_marker(rel) or existing_matches_manifest_hash(rel, old_entry):
         return
+    # A markerless native whose content is already captured verbatim in `.ai/`
+    # (an adopted source surface) is safe to refresh in place: the projection we
+    # write is the canonical truth, so nothing is lost. Divergent or unrelated
+    # markerless files are never in `represented`, so they stay protected.
+    if represented and rel in represented:
+        return
     raise SafetyError(
         "refusing to %s markerless file at generated path %s. "
-        "Run %s doctor and adopt/reconcile it first, or remove it manually." %
+        "Run %s status and resolve the Blocking item before syncing." %
         (action, rel, COMMAND_NAME))
 
 
-def preflight_file_mutations(texts, copies, old_entries, new_file_paths):
+def preflight_file_mutations(texts, copies, old_entries, new_file_paths, represented=None):
     old_files = manifest_files_by_path(old_entries)
     tracked = git_tracked_paths() if STEALTH_MODE else set()
     for p, content in sorted(texts.items()):
         ap = abspath(p)
         if os.path.isfile(ap) and read_text(ap) == content:
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
     for p, src in sorted(copies.items()):
         ap = abspath(p)
         if os.path.isfile(ap) and read_bytes(ap) == read_bytes(src):
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
     for entry in old_entries:
         if entry.get("mode", "file") != "file":
             continue
@@ -1058,7 +1064,7 @@ def preflight_file_mutations(texts, copies, old_entries, new_file_paths):
                 add_stealth_skip(
                     "%s is tracked; stealth mode skipped pruning stale generated output." % p)
                 continue
-            assert_safe_file_mutation(p, entry, "prune")
+            assert_safe_file_mutation(p, entry, "prune", represented)
     return old_files
 
 
@@ -1110,19 +1116,20 @@ def compare_outputs(texts, copies, managed, entries):
     return drift
 
 
-def write_outputs(texts, copies, managed, entries):
+def write_outputs(texts, copies, managed, entries, represented=None):
     old_entries = read_manifest_entries()
     tracked = git_tracked_paths() if STEALTH_MODE else set()
     new_file_paths = set(list(texts.keys()) + list(copies.keys()))
     new_managed = set((p, b) for p, blocks in managed.items() for b in blocks)
-    old_files = preflight_file_mutations(texts, copies, old_entries, new_file_paths)
+    old_files = preflight_file_mutations(
+        texts, copies, old_entries, new_file_paths, represented)
     created = updated = 0
 
     for p, content in sorted(texts.items()):
         ap = abspath(p)
         if os.path.isfile(ap) and read_text(ap) == content:
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
         existed = os.path.exists(ap)
         write_text(ap, content)
         created += 0 if existed else 1
@@ -1133,7 +1140,7 @@ def write_outputs(texts, copies, managed, entries):
         data = read_bytes(src)
         if os.path.isfile(ap) and read_bytes(ap) == data:
             continue
-        assert_safe_file_mutation(p, old_files.get(p), "overwrite")
+        assert_safe_file_mutation(p, old_files.get(p), "overwrite", represented)
         existed = os.path.exists(ap)
         write_bytes(ap, data)
         created += 0 if existed else 1
@@ -1171,7 +1178,7 @@ def write_outputs(texts, copies, managed, entries):
                 add_stealth_skip(
                     "%s is tracked; stealth mode skipped pruning stale generated output." % p)
                 continue
-            assert_safe_file_mutation(p, entry, "prune")
+            assert_safe_file_mutation(p, entry, "prune", represented)
             os.remove(abspath(p))
             pruned.append(p)
     prune_empty_dirs([p.split(" (", 1)[0] for p in pruned])
@@ -1200,17 +1207,23 @@ def command_sync(check=False):
             print("Generated IDE folders are STALE vs %s master:" % AI_REL)
             for d in drift:
                 print("    %s" % d)
-            print("\nRun %s to regenerate local projections and refresh the manifest." % COMMAND_NAME)
+            print("\nRun %s sync to regenerate local projections and refresh the manifest." % COMMAND_NAME)
+            print("If sync is blocked, run %s status and resolve the Blocking items first." % COMMAND_NAME)
             print_stealth_skips()
             return 1
         print("In sync: %d generated entries match %s master." % (len(entries), AI_REL))
         print_stealth_skips()
         return 0
 
+    represented = represented_native_paths(assets)
     try:
-        created, updated, managed_updated, pruned = write_outputs(texts, copies, managed, entries)
+        created, updated, managed_updated, pruned = write_outputs(
+            texts, copies, managed, entries, represented)
     except SafetyError as e:
         print("ERROR: %s" % e)
+        print("")
+        print("Sync is blocked by a markerless native file that Agentic Config will not overwrite.")
+        print("Run %s status to see blocking items and the next safe step." % COMMAND_NAME)
         return 1
     by_type = {}
     for asset in assets:
@@ -1768,6 +1781,10 @@ def adopt_asset(ide, path, global_priority="error"):
                 print("skip %s: %s" % (rel, message))
                 return False
             raise GlobalPriorityError(message)
+    _by_key, by_fp, _by_name = canonical_indexes(load_assets())
+    if asset_fingerprint(asset) in by_fp:
+        print("skip %s: already represented in %s/" % (rel, AI_REL))
+        return False
     dest_rel = write_canonical_asset(asset)
     print("adopted %s -> %s" % (rel, dest_rel))
     return True
@@ -1802,6 +1819,29 @@ def scan_native_files(include_global=True, include_repo=True):
     return sorted(found, key=lambda x: x[2])
 
 
+def represented_native_paths(assets):
+    """Repo-native markerless files whose content is already captured verbatim
+    in canonical `.ai/` (exact fingerprint match).
+
+    These are the surfaces an earlier `adopt`/`reconcile` promoted; sync may
+    refresh them in place because the same asset already lives in `.ai/`.
+    Divergent or unrelated markerless files never match, so they remain
+    protected by the markerless-overwrite guard.
+    """
+    _by_key, by_fp, _by_name = canonical_indexes(assets)
+    paths = set()
+    for ide, kind, rp in scan_native_files(include_global=False):
+        if kind == "unsupported-policy" or has_marker(rp):
+            continue
+        try:
+            record = native_record(ide, kind, rp)
+        except Exception:
+            continue
+        if record["fingerprint"] in by_fp:
+            paths.add(record["path"])
+    return paths
+
+
 def command_adopt(args):
     try:
         if args.global_scope:
@@ -1810,12 +1850,24 @@ def command_adopt(args):
                 "global assets stay user-level and take priority" % AI_REL)
         if args.all:
             adopted = 0
+            unresolved = []
             for ide, kind, rp in scan_native_files(include_global=False):
                 if kind == "unsupported-policy" or has_marker(rp):
                     continue
-                if adopt_asset(ide, rp, global_priority="skip"):
-                    adopted += 1
+                try:
+                    if adopt_asset(ide, rp, global_priority="skip"):
+                        adopted += 1
+                except ValueError as e:
+                    # One asset that conflicts with existing `.ai/` content (or
+                    # fails to parse) must not abort adoption of everything else.
+                    unresolved.append(rp)
+                    print("skip %s: %s" % (rp, e))
             print("adopted %d native assets" % adopted)
+            if unresolved:
+                print(
+                    "%d native asset(s) still need manual resolution; "
+                    "review Blocking items before syncing with: %s" %
+                    (len(unresolved), shell_command([COMMAND_NAME, "status"])))
             return 0
         if not args.ide or not args.path:
             raise ValueError("usage: adopt <ide> <path> or adopt --all")
@@ -1953,6 +2005,153 @@ def command_doctor(args):
         state["drift"], state["native_only"], state["exact_groups"],
         conflicts, state["unsupported"], state["canonical_ide_prefixes"],
     ]) else 0
+
+
+def print_limited(items, limit=8):
+    shown = list(items[:limit])
+    for item in shown:
+        print("  %s" % item)
+    remaining = len(items) - len(shown)
+    if remaining > 0:
+        print("  ... and %d more" % remaining)
+
+
+def status_conflicts(state):
+    return state["canonical_conflicts"] + state["duplicate_conflicts"] + state["parse_errors"]
+
+
+def command_status(args):
+    if args.check:
+        return command_sync(check=True)
+
+    state = find_doctor_issues(False)
+    conflicts = status_conflicts(state)
+    canonical_blockers = state["canonical_conflicts"] + state["parse_errors"]
+    duplicate_blockers = state["duplicate_conflicts"]
+    repo_represented = [r for r in state["represented"] if r["scope"] == "repo"]
+    global_represented = [r for r in state["represented"] if r["scope"] == "global"]
+
+    blocking = []
+    if conflicts:
+        blocking.append("%d conflict(s) need a human decision." % len(conflicts))
+    if state["native_only"]:
+        blocking.append("%d native-only asset(s) can be imported." % len(state["native_only"]))
+    if state["exact_groups"]:
+        blocking.append("%d exact duplicate group(s) can be reconciled." % len(state["exact_groups"]))
+    if state["canonical_ide_prefixes"]:
+        blocking.append("%d canonical asset(s) use IDE-specific names." %
+                        len(state["canonical_ide_prefixes"]))
+
+    optional_count = (
+        len(state["unsupported"]) + len(state["cursor_visible_overlaps"]) +
+        len(state["degradations"]) + len(state["possible"]) +
+        len(state["global_shadowed"]) + len(state["global_canonical_conflicts"]) +
+        len(global_represented)
+    )
+
+    print("Agentic Config Status")
+    print("")
+    if blocking:
+        print("Blocking:")
+        for item in blocking:
+            print("  %s" % item)
+        if conflicts:
+            print("  Conflicts:")
+            print_limited(conflicts)
+        if state["native_only"]:
+            print("  Native-only assets:")
+            print_limited(["%s" % r["path"] for r in state["native_only"]])
+        if state["exact_groups"]:
+            print("  Exact duplicate groups:")
+            print_limited([
+                "%s %s" % (group[0]["asset"]["type"], group[0]["asset"]["name"])
+                for group in state["exact_groups"]
+            ])
+        print("")
+    else:
+        print("Blocking:")
+        print("  None")
+        print("")
+
+    if state["drift"]:
+        print("Needs update:")
+        print("  %d generated output(s) are stale." % len(state["drift"]))
+        print_limited(state["drift"])
+        print("")
+    else:
+        print("Needs update:")
+        print("  None")
+        print("")
+
+    if repo_represented:
+        print("Recommended cleanup:")
+        print("  %d native duplicate(s) are already represented in %s/." %
+              (len(repo_represented), AI_REL))
+        print("  Run: %s clean --native-duplicates" % COMMAND_NAME)
+        print("")
+    else:
+        print("Recommended cleanup:")
+        print("  None")
+        print("")
+
+    if optional_count:
+        print("Optional / informational:")
+        if state["unsupported"]:
+            print("  %d unsupported or Codex-only asset(s)." % len(state["unsupported"]))
+        if state["cursor_visible_overlaps"]:
+            print("  %d Cursor-visible overlap group(s)." %
+                  len(state["cursor_visible_overlaps"]))
+        if state["degradations"]:
+            print("  %d degraded mapping note(s)." % len(state["degradations"]))
+        if state["possible"]:
+            print("  %d possible duplicate content note(s)." % len(state["possible"]))
+        if state["global_shadowed"]:
+            print("  %d repo-native asset(s) are shadowed by global assets." %
+                  len(state["global_shadowed"]))
+        if state["global_canonical_conflicts"]:
+            print("  %d global native overlap(s)." %
+                  len(state["global_canonical_conflicts"]))
+        if global_represented:
+            print("  %d global native duplicate(s) are represented in %s/." %
+                  (len(global_represented), AI_REL))
+        print("  Run %s status --verbose for full details." % COMMAND_NAME)
+        print("")
+    else:
+        print("Optional / informational:")
+        print("  None")
+        print("")
+
+    print("Next step:")
+    if canonical_blockers:
+        print("  Resolve the conflicts above, then run %s sync." % COMMAND_NAME)
+    elif duplicate_blockers:
+        print("  Run %s import --all to import unambiguous assets." % COMMAND_NAME)
+        print("  Resolve any conflicts that remain, then run %s sync." % COMMAND_NAME)
+    elif state["exact_groups"]:
+        print("  Run %s import --exact-duplicates." % COMMAND_NAME)
+    elif state["native_only"]:
+        print("  Run %s import --all." % COMMAND_NAME)
+    elif state["canonical_ide_prefixes"]:
+        print("  Rename the IDE-specific canonical assets, then run %s sync." % COMMAND_NAME)
+    elif state["drift"]:
+        print("  Run %s sync." % COMMAND_NAME)
+    elif repo_represented:
+        print("  Optional: run %s clean --native-duplicates." % COMMAND_NAME)
+    elif optional_count:
+        print("  No blocking action. Review optional items only if they matter to your workflow.")
+    else:
+        print("  No action needed.")
+    print_stealth_skips()
+
+    if args.verbose:
+        print("")
+        print("Verbose doctor report:")
+        class DoctorArgs(object):
+            staged = False
+        command_doctor(DoctorArgs())
+        return 1 if blocking or state["drift"] else 0
+
+    return 1 if blocking or state["drift"] else 0
 
 
 def reconcile_group(group):
@@ -2206,6 +2405,11 @@ def main(argv=None):
         ap = argparse.ArgumentParser(prog="sync.py doctor")
         ap.add_argument("--staged", action="store_true")
         return command_doctor(ap.parse_args(argv[1:]))
+    if cmd == "status":
+        ap = argparse.ArgumentParser(prog="sync.py status")
+        ap.add_argument("--verbose", action="store_true")
+        ap.add_argument("--check", action="store_true")
+        return command_status(ap.parse_args(argv[1:]))
     if cmd == "adopt":
         ap = argparse.ArgumentParser(prog="sync.py adopt")
         ap.add_argument("ide", nargs="?")
